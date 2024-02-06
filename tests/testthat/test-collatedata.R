@@ -7,6 +7,6 @@ test_that("collatedata function tests", {
     expect_error(collatedata("nonexistent_file.zip"), "File does not exist at the given path.")
 
     # Test that the function works with a valid zip file
-    test_data <- collatedata("C:/Users/guyf0/Desktop/20210518A.zip")
+    test_data <- collatedata("/Users/yg/Desktop/20210518A.zip")
     expect_is(test_data, "data.table")
 })
