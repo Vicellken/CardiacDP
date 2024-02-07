@@ -21,6 +21,14 @@ knitr::opts_chunk$set(
 CardiacDP can automatically read and collate heart rate data, and then
 employing the autocorrelation function (ACF) with a genetic algorithm framework to locate periodic sub-sequences within each sequence. From the candidate heart rates of these sub-sequences, the final results are either evaluated based on the autocorrelation value or a tracking index (TI).
 
+## Test coverage
+```
+CardiacDP Coverage: 88.36%
+R/collatedata.R: 87.91%
+R/computeHR.R: 88.44%
+```
+
+
 ## Package structure
 
 ```{r, echo=FALSE, out.width = '100%'}
@@ -31,6 +39,9 @@ knitr::include_graphics("pkg_str.png")
 
 ``` r
 install.packages("CardiacDP")
+
+# or install from source package
+install.packages("CardiacDP_0.1.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Example

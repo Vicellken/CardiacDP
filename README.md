@@ -13,6 +13,12 @@ the candidate heart rates of these sub-sequences, the final results are
 either evaluated based on the autocorrelation value or a tracking index
 (TI).
 
+## Test coverage
+
+    CardiacDP Coverage: 88.36%
+    R/collatedata.R: 87.91%
+    R/computeHR.R: 88.44%
+
 ## Package structure
 
 <img src="pkg_str.png" width="100%" />
@@ -21,6 +27,9 @@ either evaluated based on the autocorrelation value or a tracking index
 
 ``` r
 install.packages("CardiacDP")
+
+# or install from source package
+install.packages("CardiacDP_0.1.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Example
@@ -39,6 +48,7 @@ collatedata(file_path = "../20210518A.zip")
 #> 
 #> [[3]]
 #>               folders pages
+#>                <char> <int>
 #> 1:     20210518A-0001    90
 #> 2: 20210518A-0001 (2)    90
 #> 3: 20210518A-0001 (3)    90
@@ -93,9 +103,6 @@ output <- computeHR("../20210518A.csv")
 #> [1] "Generating output..."
 #> [1] "Calculating heart rate: Channel D..."
 #> [1] "Generating output..."
-#> Warning in summary.lm(lm(hr ~ ix, prev)): essentially perfect fit: summary may
-#> be unreliable
-
 #> Warning in summary.lm(lm(hr ~ ix, prev)): essentially perfect fit: summary may
 #> be unreliable
 
@@ -205,32 +212,35 @@ sub-sequences (subseqHR); 2) the weighed heart rate per sequence
 ## results obtained from evaluating the candidate heart rates by autocorrelation values
 output[["results_ACF"]][["Channel A"]]
 #> $subseqHR
-#>       ix win    s    e  p    f       ACF lag       hr        res
-#>   1:   1   1    1 6430  3 6429 0.5748986 180 35.71411 0.00933338
-#>   2:   2   1    1 4368  1 4367 0.5211720 170 37.81494 0.00933338
-#>   3:   3   1    1 5597  1 5596 0.5024814 164 39.19841 0.00933338
-#>   4:   4   1 3215 3856  6  641 0.5241728 156 41.20859 0.00933338
-#>   5:   4   2 3534 6430  8 2896 0.5014508 188 34.19436 0.00933338
-#>  ---                                                            
-#> 234: 166   1   NA   NA NA   NA        NA  NA       NA 0.00933338
-#> 235: 167   1   NA   NA NA   NA        NA  NA       NA 0.00933338
-#> 236: 168   1   NA   NA NA   NA        NA  NA       NA 0.00933338
-#> 237: 169   1   NA   NA NA   NA        NA  NA       NA 0.00933338
-#> 238: 170   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> Index: <ix>
+#>         ix   win     s     e     p     f       ACF   lag       hr        res
+#>      <int> <num> <num> <num> <num> <num>     <num> <num>    <num>      <num>
+#>   1:     1     1     1  6430     6  6429 0.5748986   180 35.71411 0.00933338
+#>   2:     2     1     1  4385     3  4384 0.5149696   170 37.81494 0.00933338
+#>   3:     3     1     1  5701     1  5700 0.5000061   164 39.19841 0.00933338
+#>   4:     4     1  3215  3856     6   641 0.5241728   156 41.20859 0.00933338
+#>   5:     4     2  3708  6430     8  2722 0.5271594   188 34.19436 0.00933338
+#>  ---                                                                        
+#> 224:   166     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#> 225:   167     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#> 226:   168     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#> 227:   169     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#> 228:   170     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
 #> 
 #> $weighedHR
-#>       ix      wACF      whr
-#>   1:   1 0.5748986 35.71411
-#>   2:   2 0.5211720 37.81494
-#>   3:   3 0.5024814 39.19841
-#>   4:   4 0.5048457 35.24235
-#>   5:   5 0.5194266 36.43879
-#>  ---                       
-#> 166: 166        NA       NA
-#> 167: 167        NA       NA
-#> 168: 168        NA       NA
-#> 169: 169        NA       NA
-#> 170: 170        NA       NA
+#>         ix      wACF      whr
+#>      <int>     <num>    <num>
+#>   1:     1 0.5748986 35.71411
+#>   2:     2 0.5149696 37.81494
+#>   3:     3 0.5000061 39.19841
+#>   4:     4 0.5266324 35.43210
+#>   5:     5 0.5230150 36.64477
+#>  ---                         
+#> 166:   166        NA       NA
+#> 167:   167        NA       NA
+#> 168:   168        NA       NA
+#> 169:   169        NA       NA
+#> 170:   170        NA       NA
 #> 
 #> $plot
 #> Warning: Removed 15 rows containing missing values (`geom_point()`).
@@ -243,32 +253,35 @@ output[["results_ACF"]][["Channel A"]]
 # results obtained from evaluating the candidate heart rates by the tracking index
 output[["results_TI"]][["Channel A"]]
 #> $subseqHR
-#>       ix win    s    e  p    f       ACF lag       hr        res
-#>   1:   1   1    1 6430  3 6429 0.5748986 180 35.71411 0.00933338
-#>   2:   2   1    1 4368  1 4367 0.5211720 170 37.81494 0.00933338
-#>   3:   3   1    1 5597  1 5596 0.5024814 164 39.19841 0.00933338
-#>   4:   4   1 3215 3856  6  641 0.5241728 156 41.20859 0.00933338
-#>   5:   4   2 3534 6430  8 2896 0.5014508 188 34.19436 0.00933338
-#>  ---                                                            
-#> 234: 166   1   NA   NA NA   NA        NA  NA       NA 0.00933338
-#> 235: 167   1   NA   NA NA   NA        NA  NA       NA 0.00933338
-#> 236: 168   1   NA   NA NA   NA        NA  NA       NA 0.00933338
-#> 237: 169   1   NA   NA NA   NA        NA  NA       NA 0.00933338
-#> 238: 170   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> Index: <ix>
+#>         ix   win     s     e     p     f       ACF   lag       hr        res
+#>      <int> <num> <num> <num> <num> <num>     <num> <num>    <num>      <num>
+#>   1:     1     1     1  6430     6  6429 0.5748986   180 35.71411 0.00933338
+#>   2:     2     1     1  4385     3  4384 0.5149696   170 37.81494 0.00933338
+#>   3:     3     1     1  5701     1  5700 0.5000061   164 39.19841 0.00933338
+#>   4:     4     1  3215  3856     6   641 0.5241728   156 41.20859 0.00933338
+#>   5:     4     2  3708  6430     8  2722 0.5271594   188 34.19436 0.00933338
+#>  ---                                                                        
+#> 224:   166     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#> 225:   167     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#> 226:   168     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#> 227:   169     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#> 228:   170     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
 #> 
 #> $weighedHR
-#>       ix      wACF      whr
-#>   1:   1 0.5748986 35.71411
-#>   2:   2 0.5211720 37.81494
-#>   3:   3 0.5024814 39.19841
-#>   4:   4 0.5048457 35.24235
-#>   5:   5 0.5194266 36.43879
-#>  ---                       
-#> 166: 166        NA       NA
-#> 167: 167        NA       NA
-#> 168: 168        NA       NA
-#> 169: 169        NA       NA
-#> 170: 170        NA       NA
+#>         ix      wACF      whr
+#>      <int>     <num>    <num>
+#>   1:     1 0.5748986 35.71411
+#>   2:     2 0.5149696 37.81494
+#>   3:     3 0.5000061 39.19841
+#>   4:     4 0.5266324 35.43210
+#>   5:     5 0.5230150 36.64477
+#>  ---                         
+#> 166:   166        NA       NA
+#> 167:   167        NA       NA
+#> 168:   168        NA       NA
+#> 169:   169        NA       NA
+#> 170:   170        NA       NA
 #> 
 #> $plot
 #> Warning: Removed 16 rows containing missing values (`geom_point()`).
