@@ -22,7 +22,7 @@
 #' @param an_in Analysis interval (length of a sequence; in minute), by default 1
 #' @param acf_thres Threshold used in ACF to classify periodic oscillations from aperiodic noises, by default 0.5
 #' @param lr_thres Linear regression r-sq threshold in extrapolating the tracking index, by default 0.7
-#' @return The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR), the weighed heart rate per sequence (weighedHR) and a plot (plot).
+#' @return The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR), the weighted heart rate per sequence (weightedHR) and a plot (plot).
 #' @export computeHR
 #' @examples \dontrun{
 #' # use the default parameters to analyse a zip file
@@ -339,7 +339,7 @@ computeHR <- function(
                     }), 1, sum
                 ) / (seqtally[, length(unique(tx))]))),
                 c("wACF", "whr")
-            )) # weighed by duration
+            )) # weighted by duration
         } else {
             if (nrow(na.omit(dt)) == 1) { # only one periodic sub-sequence
                 return(data.table::data.table(
@@ -677,12 +677,12 @@ computeHR <- function(
             output$candidateHR[[channel]] <- out[["counts"]] # candidate HR corresponding to the sub-sequences
             output$results_ACF[[channel]] <- list(
                 subseqHR = byACFdt, # results without tracking
-                weighedHR = wACFdt,
+                weightedHR = wACFdt,
                 plot = ACFplot
             )
             output$results_TI[[channel]] <- list(
                 subseqHR = byTIdt, # results with tracking
-                weighedHR = wTIdt,
+                weightedHR = wTIdt,
                 plot = TIplot
             )
         }

@@ -28,7 +28,17 @@ either evaluated based on the autocorrelation value or a tracking index
 ``` r
 install.packages("CardiacDP")
 
-# or install from source package
+# Or the source package from GitHub:
+# Vector of package names
+packages <- c("data.table", "doParallel", "dplyr", "foreach", "ggplot2", "purrr", "RColorBrewer", "stringr")
+
+lapply(packages, function(pkg) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg)
+  }
+})
+
+# Install the source package
 install.packages("CardiacDP_0.1.0.tar.gz", repos = NULL, type = "source")
 ```
 
@@ -48,7 +58,6 @@ collatedata(file_path = "../20210518A.zip")
 #> 
 #> [[3]]
 #>               folders pages
-#>                <char> <int>
 #> 1:     20210518A-0001    90
 #> 2: 20210518A-0001 (2)    90
 #> 3: 20210518A-0001 (3)    90
@@ -103,12 +112,6 @@ output <- computeHR("../20210518A.csv")
 #> [1] "Generating output..."
 #> [1] "Calculating heart rate: Channel D..."
 #> [1] "Generating output..."
-#> Warning in summary.lm(lm(hr ~ ix, prev)): essentially perfect fit: summary may
-#> be unreliable
-
-#> Warning in summary.lm(lm(hr ~ ix, prev)): essentially perfect fit: summary may
-#> be unreliable
-
 #> Warning in summary.lm(lm(hr ~ ix, prev)): essentially perfect fit: summary may
 #> be unreliable
 #> [1] "Calculating heart rate: Channel E..."
@@ -205,45 +208,42 @@ from results_ACF and results_TI. These results referred to evaluating
 the candidate heart rates by autocorrelation values (i.e. the “ACF + GA”
 approach) and the tracking index (i.e. the “ACF + GA +TI” approach)
 respectively. Each of them consists of 1) the details of the
-sub-sequences (subseqHR); 2) the weighed heart rate per sequence
-(weighedHR); and 3) a plot of weighed heart rate against time (plot).
+sub-sequences (subseqHR); 2) the weighted heart rate per sequence
+(weightedHR); and 3) a plot of weighted heart rate against time (plot).
 
 ``` r
 ## results obtained from evaluating the candidate heart rates by autocorrelation values
 output[["results_ACF"]][["Channel A"]]
 #> $subseqHR
-#> Index: <ix>
-#>         ix   win     s     e     p     f       ACF   lag       hr        res
-#>      <int> <num> <num> <num> <num> <num>     <num> <num>    <num>      <num>
-#>   1:     1     1     1  6430     6  6429 0.5748986   180 35.71411 0.00933338
-#>   2:     2     1     1  4385     3  4384 0.5149696   170 37.81494 0.00933338
-#>   3:     3     1     1  5701     1  5700 0.5000061   164 39.19841 0.00933338
-#>   4:     4     1  3215  3856     6   641 0.5241728   156 41.20859 0.00933338
-#>   5:     4     2  3708  6430     8  2722 0.5271594   188 34.19436 0.00933338
-#>  ---                                                                        
-#> 224:   166     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
-#> 225:   167     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
-#> 226:   168     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
-#> 227:   169     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
-#> 228:   170     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#>       ix win    s    e  p    f       ACF lag       hr        res
+#>   1:   1   1    1 6430 10 6429 0.5748986 180 35.71411 0.00933338
+#>   2:   2   1    1 4248  1 4247 0.5236789 170 37.81494 0.00933338
+#>   3:   3   1    1 5728  2 5727 0.5001360 164 39.19841 0.00933338
+#>   4:   4   1 3215 3856  6  641 0.5241728 156 41.20859 0.00933338
+#>   5:   4   2 3572 6430  8 2858 0.5034119 186 34.56204 0.00933338
+#>  ---                                                            
+#> 228: 166   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> 229: 167   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> 230: 168   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> 231: 169   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> 232: 170   1   NA   NA NA   NA        NA  NA       NA 0.00933338
 #> 
 #> $weighedHR
-#>         ix      wACF      whr
-#>      <int>     <num>    <num>
-#>   1:     1 0.5748986 35.71411
-#>   2:     2 0.5149696 37.81494
-#>   3:     3 0.5000061 39.19841
-#>   4:     4 0.5266324 35.43210
-#>   5:     5 0.5230150 36.64477
-#>  ---                         
-#> 166:   166        NA       NA
-#> 167:   167        NA       NA
-#> 168:   168        NA       NA
-#> 169:   169        NA       NA
-#> 170:   170        NA       NA
+#>       ix      wACF      whr
+#>   1:   1 0.5748986 35.71411
+#>   2:   2 0.5236789 37.81494
+#>   3:   3 0.5001360 39.19841
+#>   4:   4 0.5066364 35.59436
+#>   5:   5 0.5078256 36.38321
+#>  ---                       
+#> 166: 166        NA       NA
+#> 167: 167        NA       NA
+#> 168: 168        NA       NA
+#> 169: 169        NA       NA
+#> 170: 170        NA       NA
 #> 
 #> $plot
-#> Warning: Removed 15 rows containing missing values (`geom_point()`).
+#> Warning: Removed 14 rows containing missing values (`geom_point()`).
 ```
 
 <img src="man/figures/README-final results-1.png" width="100%" />
@@ -253,35 +253,32 @@ output[["results_ACF"]][["Channel A"]]
 # results obtained from evaluating the candidate heart rates by the tracking index
 output[["results_TI"]][["Channel A"]]
 #> $subseqHR
-#> Index: <ix>
-#>         ix   win     s     e     p     f       ACF   lag       hr        res
-#>      <int> <num> <num> <num> <num> <num>     <num> <num>    <num>      <num>
-#>   1:     1     1     1  6430     6  6429 0.5748986   180 35.71411 0.00933338
-#>   2:     2     1     1  4385     3  4384 0.5149696   170 37.81494 0.00933338
-#>   3:     3     1     1  5701     1  5700 0.5000061   164 39.19841 0.00933338
-#>   4:     4     1  3215  3856     6   641 0.5241728   156 41.20859 0.00933338
-#>   5:     4     2  3708  6430     8  2722 0.5271594   188 34.19436 0.00933338
-#>  ---                                                                        
-#> 224:   166     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
-#> 225:   167     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
-#> 226:   168     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
-#> 227:   169     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
-#> 228:   170     1    NA    NA    NA    NA        NA    NA       NA 0.00933338
+#>       ix win    s    e  p    f       ACF lag       hr        res
+#>   1:   1   1    1 6430 10 6429 0.5748986 180 35.71411 0.00933338
+#>   2:   2   1    1 4248  1 4247 0.5236789 170 37.81494 0.00933338
+#>   3:   3   1    1 5728  2 5727 0.5001360 164 39.19841 0.00933338
+#>   4:   4   1 3215 3856  6  641 0.5241728 156 41.20859 0.00933338
+#>   5:   4   2 3572 6430  8 2858 0.5034119 186 34.56204 0.00933338
+#>  ---                                                            
+#> 228: 166   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> 229: 167   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> 230: 168   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> 231: 169   1   NA   NA NA   NA        NA  NA       NA 0.00933338
+#> 232: 170   1   NA   NA NA   NA        NA  NA       NA 0.00933338
 #> 
 #> $weighedHR
-#>         ix      wACF      whr
-#>      <int>     <num>    <num>
-#>   1:     1 0.5748986 35.71411
-#>   2:     2 0.5149696 37.81494
-#>   3:     3 0.5000061 39.19841
-#>   4:     4 0.5266324 35.43210
-#>   5:     5 0.5230150 36.64477
-#>  ---                         
-#> 166:   166        NA       NA
-#> 167:   167        NA       NA
-#> 168:   168        NA       NA
-#> 169:   169        NA       NA
-#> 170:   170        NA       NA
+#>       ix      wACF      whr
+#>   1:   1 0.5748986 35.71411
+#>   2:   2 0.5236789 37.81494
+#>   3:   3 0.5001360 39.19841
+#>   4:   4 0.5066364 35.59436
+#>   5:   5 0.5078256 36.38321
+#>  ---                       
+#> 166: 166        NA       NA
+#> 167: 167        NA       NA
+#> 168: 168        NA       NA
+#> 169: 169        NA       NA
+#> 170: 170        NA       NA
 #> 
 #> $plot
 #> Warning: Removed 16 rows containing missing values (`geom_point()`).
@@ -291,9 +288,9 @@ output[["results_TI"]][["Channel A"]]
 
 ## Interpret results
 
-| Variable    | Content                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|-------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| finalsubseq | A list of positions and durations of the final periodic sub-sequences                                                                                                                                                                                                                                                                                                                                                                      |
-| candidateHR | A list of candidate heart rates extracted from ACF for each sub-sequence                                                                                                                                                                                                                                                                                                                                                                   |
-| results_ACF | Results obtained from evaluating the candidate heart rates of each sub-sequence based on autocorrelation values (i.e. following the “ACF + GA” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weighedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
-| results_TI  | Results obtained from evaluating the candidate heart rates of each sub-sequence using a tracking index (i.e. following the “ACF + GA + TI” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weighedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time     |
+| Variable    | Content                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| finalsubseq | A list of positions and durations of the final periodic sub-sequences                                                                                                                                                                                                                                                                                                                                                                       |
+| candidateHR | A list of candidate heart rates extracted from ACF for each sub-sequence                                                                                                                                                                                                                                                                                                                                                                    |
+| results_ACF | Results obtained from evaluating the candidate heart rates of each sub-sequence based on autocorrelation values (i.e. following the “ACF + GA” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
+| results_TI  | Results obtained from evaluating the candidate heart rates of each sub-sequence using a tracking index (i.e. following the “ACF + GA + TI” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time     |

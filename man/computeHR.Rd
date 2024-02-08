@@ -33,7 +33,7 @@ computeHR(
 \item{lr_thres}{Linear regression r-sq threshold in extrapolating the tracking index, by default 0.7}
 }
 \value{
-The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR), the weighed heart rate per sequence (weighedHR) and a plot (plot).
+The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR), the weighted heart rate per sequence (weightedHR) and a plot (plot).
 }
 \description{
 Employing the autocorrelation function (ACF) with a genetic algorithm framework to locate periodic sub-sequences within each sequence. From the candidate heart rates of these sub-sequences, the final results are either evaluated based on the autocorrelation value or a tracking index (TI).

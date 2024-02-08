@@ -40,7 +40,17 @@ knitr::include_graphics("pkg_str.png")
 ``` r
 install.packages("CardiacDP")
 
-# or install from source package
+# Or the source package from GitHub:
+# Vector of package names
+packages <- c("data.table", "doParallel", "dplyr", "foreach", "ggplot2", "purrr", "RColorBrewer", "stringr")
+
+lapply(packages, function(pkg) {
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg)
+  }
+})
+
+# Install the source package
 install.packages("CardiacDP_0.1.0.tar.gz", repos = NULL, type = "source")
 ```
 
@@ -76,7 +86,7 @@ The corresponding candidate heart rates per sub-sequences can be found in candid
 output[["candidateHR"]][["Channel A"]]
 ```
 
-The final results after evaluating the candidate heart rates, checking for resolution and weighing for durations can eventually be obtained from results_ACF and results_TI. These results referred to evaluating the candidate heart rates by autocorrelation values (i.e. the “ACF + GA” approach) and the tracking index (i.e. the “ACF + GA +TI” approach) respectively. Each of them consists of 1) the details of the sub-sequences (subseqHR); 2) the weighed heart rate per sequence (weighedHR); and 3) a plot of weighed heart rate against time (plot).
+The final results after evaluating the candidate heart rates, checking for resolution and weighing for durations can eventually be obtained from results_ACF and results_TI. These results referred to evaluating the candidate heart rates by autocorrelation values (i.e. the “ACF + GA” approach) and the tracking index (i.e. the “ACF + GA +TI” approach) respectively. Each of them consists of 1) the details of the sub-sequences (subseqHR); 2) the weighted heart rate per sequence (weightedHR); and 3) a plot of weighted heart rate against time (plot).
 
 ```{r final results}
 ## results obtained from evaluating the candidate heart rates by autocorrelation values
@@ -91,5 +101,5 @@ output[["results_TI"]][["Channel A"]]
 |---------|---------|
 | finalsubseq  | A list of positions and durations of the final periodic sub-sequences  |
 | candidateHR  | A list of candidate heart rates extracted from ACF for each sub-sequence  |
-| results_ACF | Results obtained from evaluating the candidate heart rates of each sub-sequence based on autocorrelation values (i.e. following the “ACF + GA” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weighedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
-| results_TI | Results obtained from evaluating the candidate heart rates of each sub-sequence using a tracking index (i.e. following the “ACF + GA + TI” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weighedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
+| results_ACF | Results obtained from evaluating the candidate heart rates of each sub-sequence based on autocorrelation values (i.e. following the “ACF + GA” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
+| results_TI | Results obtained from evaluating the candidate heart rates of each sub-sequence using a tracking index (i.e. following the “ACF + GA + TI” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
