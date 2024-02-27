@@ -43,6 +43,9 @@ install.packages("CardiacDP_0.1.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Example
+#### see [User guidelines](./User%20guidelines.pdf) for detailed function descriptions
+
+</br>
 
 This is an example shows the complete analysis pipeline:
 
