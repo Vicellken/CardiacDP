@@ -1,9 +1,9 @@
-
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 # CardiacDP
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
 CardiacDP can automatically read and collate heart rate data, and then
@@ -25,10 +25,14 @@ either evaluated based on the autocorrelation value or a tracking index
 
 ## Installation
 
-``` r
+```r
+# CRAN version (to be released)
 install.packages("CardiacDP")
 
-# Or the source package from GitHub:
+# Or from GitHub (when the paper been accepted)
+devtools::install_github("Vicellken/CardiacDP")
+
+# Or from the source package:
 # Vector of package names
 packages <- c("data.table", "doParallel", "dplyr", "foreach", "ggplot2", "purrr", "RColorBrewer", "stringr")
 
@@ -43,13 +47,14 @@ install.packages("CardiacDP_0.1.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Example
+
 #### see [User guidelines](./User%20guidelines.pdf) for detailed function descriptions
 
 </br>
 
 This is an example shows the complete analysis pipeline:
 
-``` r
+```r
 library(CardiacDP)
 # use collatedata function to generate single collated data table
 collatedata(file_path = "../20210518A.zip")
@@ -184,9 +189,9 @@ final sub-sequences. The example below shows the first five sequences
 (e.g. \[\[4\]\] indicates at the 4th minute there are three final
 sub-sequences).
 
-``` r
+```r
 # positions (in indices) and durations of the final sub-sequences
-# NOTE: the results are not included to ease the reading, please refer to Appendix S4
+# NOTE: the results are not included to ease the reading, please refer to User guidelines
 
 output[["finalsubseq"]][["Channel A"]]
 ```
@@ -198,9 +203,9 @@ candidate heart rates for the first sub-sequence (as shown in
 \[\[4\]\]\[\[1\]\]), and only one candidate heart rate for the other two
 sub-sequences (as shown in \[\[4\]\]\[\[2\]\]and \[\[4\]\]\[\[3\]\]).
 
-``` r
+```r
 # candidate heart rates of the final sub-sequences
-# NOTE: the results are not included to ease the reading, please refer to Appendix S4
+# NOTE: the results are not included to ease the reading, please refer to User guidelines
 
 output[["candidateHR"]][["Channel A"]]
 ```
@@ -214,7 +219,7 @@ respectively. Each of them consists of 1) the details of the
 sub-sequences (subseqHR); 2) the weighted heart rate per sequence
 (weightedHR); and 3) a plot of weighted heart rate against time (plot).
 
-``` r
+```r
 ## results obtained from evaluating the candidate heart rates by autocorrelation values
 output[["results_ACF"]][["Channel A"]]
 #> $subseqHR
@@ -224,7 +229,7 @@ output[["results_ACF"]][["Channel A"]]
 #>   3:   3   1    1 5728  2 5727 0.5001360 164 39.19841 0.00933338
 #>   4:   4   1 3215 3856  6  641 0.5241728 156 41.20859 0.00933338
 #>   5:   4   2 3572 6430  8 2858 0.5034119 186 34.56204 0.00933338
-#>  ---                                                            
+#>  ---                                                          
 #> 228: 166   1   NA   NA NA   NA        NA  NA       NA 0.00933338
 #> 229: 167   1   NA   NA NA   NA        NA  NA       NA 0.00933338
 #> 230: 168   1   NA   NA NA   NA        NA  NA       NA 0.00933338
@@ -238,7 +243,7 @@ output[["results_ACF"]][["Channel A"]]
 #>   3:   3 0.5001360 39.19841
 #>   4:   4 0.5066364 35.59436
 #>   5:   5 0.5078256 36.38321
-#>  ---                       
+#>  ---                     
 #> 166: 166        NA       NA
 #> 167: 167        NA       NA
 #> 168: 168        NA       NA
@@ -249,9 +254,9 @@ output[["results_ACF"]][["Channel A"]]
 #> Warning: Removed 14 rows containing missing values (`geom_point()`).
 ```
 
-<img src="man/figures/README-final results-1.png" width="100%" />
+`<img src="man/figures/README-final results-1.png" width="100%" />`
 
-``` r
+```r
 
 # results obtained from evaluating the candidate heart rates by the tracking index
 output[["results_TI"]][["Channel A"]]
@@ -262,7 +267,7 @@ output[["results_TI"]][["Channel A"]]
 #>   3:   3   1    1 5728  2 5727 0.5001360 164 39.19841 0.00933338
 #>   4:   4   1 3215 3856  6  641 0.5241728 156 41.20859 0.00933338
 #>   5:   4   2 3572 6430  8 2858 0.5034119 186 34.56204 0.00933338
-#>  ---                                                            
+#>  ---                                                          
 #> 228: 166   1   NA   NA NA   NA        NA  NA       NA 0.00933338
 #> 229: 167   1   NA   NA NA   NA        NA  NA       NA 0.00933338
 #> 230: 168   1   NA   NA NA   NA        NA  NA       NA 0.00933338
@@ -276,7 +281,7 @@ output[["results_TI"]][["Channel A"]]
 #>   3:   3 0.5001360 39.19841
 #>   4:   4 0.5066364 35.59436
 #>   5:   5 0.5078256 36.38321
-#>  ---                       
+#>  ---                     
 #> 166: 166        NA       NA
 #> 167: 167        NA       NA
 #> 168: 168        NA       NA
@@ -287,13 +292,13 @@ output[["results_TI"]][["Channel A"]]
 #> Warning: Removed 16 rows containing missing values (`geom_point()`).
 ```
 
-<img src="man/figures/README-final results-2.png" width="100%" />
+`<img src="man/figures/README-final results-2.png" width="100%" />`
 
 ## Interpret results
 
-| Variable    | Content                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|-------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| finalsubseq | A list of positions and durations of the final periodic sub-sequences                                                                                                                                                                                                                                                                                                                                                                       |
-| candidateHR | A list of candidate heart rates extracted from ACF for each sub-sequence                                                                                                                                                                                                                                                                                                                                                                    |
+| Variable    | Content                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| finalsubseq | A list of positions and durations of the final periodic sub-sequences                                                                                                                                                                                                                                                                                                                                                                          |
+| candidateHR | A list of candidate heart rates extracted from ACF for each sub-sequence                                                                                                                                                                                                                                                                                                                                                                       |
 | results_ACF | Results obtained from evaluating the candidate heart rates of each sub-sequence based on autocorrelation values (i.e. following the “ACF + GA” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
 | results_TI  | Results obtained from evaluating the candidate heart rates of each sub-sequence using a tracking index (i.e. following the “ACF + GA + TI” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time     |
