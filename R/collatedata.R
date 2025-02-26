@@ -16,16 +16,41 @@ collatedata <- function(file_path) {
     }
 
     # get the name of the zipped folder
-    dname <- strsplit(
-        unzip(file_path, list = TRUE)[1, "Name"],
-        split = "/"
-    )[[1]][1]
+    dname <- basename(tools::file_path_sans_ext(file_path))
     unzip(file_path)
+
+    print(paste("Zip file name:", dname))
+    print(paste("Files in root directory:", paste(list.files("./"), collapse = ", ")))
+
+    # Check if CSV files exist in root directory
+    csv_files <- list.files("./", pattern = "\\.csv$")
+    if (length(csv_files) > 0) {
+        # If CSV files are in root, create a directory and move them there
+        dir.create(dname, showWarnings = FALSE)
+        file.copy(csv_files, paste0("./", dname, "/"))
+        file.remove(csv_files)
+    }
+
+    print(paste("Files in extracted directory:", paste(list.files(paste0("./", dname)), collapse = ", ")))
+
     # names of directories
-    folds <- stringr::str_sort(
-        list.dirs(paste0("./", dname), full.names = FALSE)[-1],
-        numeric = TRUE
-    )
+    folds <- list.dirs(paste0("./", dname), full.names = FALSE)[-1]
+    print(paste("Subdirectories found:", paste(folds, collapse = ", ")))
+
+    if (length(folds) == 0) {
+        # If no subdirectories found, use the main directory
+        print("No subdirectories found, checking root directory")
+        folds <- "." # Use current directory instead of dname
+        root_files <- list.files(paste0("./", dname))
+        print(paste("Files in root:", paste(root_files, collapse = ", ")))
+        if (length(root_files) == 0) {
+            stop("No files found in the zip archive")
+        }
+    }
+
+    # Sort directories numerically
+    folds <- stringr::str_sort(folds, numeric = TRUE)
+    print(paste("Final folders to process:", paste(folds, collapse = ", ")))
     # number of directories
     nfold <- length(folds)
     data_str <- data.table::data.table(
@@ -34,19 +59,67 @@ collatedata <- function(file_path) {
             as.list(paste0("./", dname, "/", folds)),
             function(x) length(list.files(x, full.name = FALSE))
         )
-    ) # create a data.table displaying the data structure
-    for (tempn in list.files(paste0(
-        "./", dname, "/", folds[1]
-    ), full.name = TRUE)) {
-        temp <- suppressWarnings(data.table::fread(tempn, skip = 1L))
-        ifelse(nrow(temp) == 0, next, {
-            ch_names <- suppressWarnings(
-                colnames(data.table::fread(tempn))
-            ) # get column names
+    )
+    # Initialize ch_names as NULL before the loop
+    ch_names <- NULL
+    temp <- NULL
+    file_format <- NULL
+
+    # Get list of files in first directory
+    first_dir_files <- list.files(paste0("./", dname, "/", folds[1]), full.name = TRUE)
+    if (length(first_dir_files) == 0) {
+        stop("No files found in directory: ", paste0("./", dname, "/", folds[1]))
+    }
+
+    print(paste("Attempting to read files from:", paste0("./", dname, "/", folds[1])))
+    print(paste("Number of files found:", length(first_dir_files)))
+
+    for (tempn in first_dir_files) {
+        print(paste("Trying to read file:", tempn))
+        # Try reading with both formats
+        temp_result <- tryCatch(
+            {
+                # Try first format (semicolon separated)
+                print("Attempting semicolon format...")
+                temp_data <- suppressWarnings(data.table::fread(tempn, skip = 1L))
+                if (nrow(temp_data) > 0) {
+                    ch_names <- suppressWarnings(colnames(data.table::fread(tempn)))
+                    list(data = temp_data, names = ch_names, format = "semicolon")
+                } else {
+                    NULL
+                }
+            },
+            error = function(e) {
+                # Try second format (space separated)
+                print("Attempting space format...")
+                temp_data <- suppressWarnings(data.table::fread(tempn))
+                if (nrow(temp_data) > 0) {
+                    # Extract column names without units
+                    ch_names <- colnames(temp_data)
+                    ch_names <- gsub("\\s*\\([^\\)]+\\)", "", ch_names)
+                    list(data = temp_data, names = ch_names, format = "space")
+                } else {
+                    NULL
+                }
+            }
+        )
+
+        if (!is.null(temp_result)) {
+            ch_names <- temp_result$names
+            file_format <- temp_result$format
+            temp <- temp_result$data
             colnames(temp) <- ch_names
-            rm(tempn)
+            print(paste("Successfully read file with format:", file_format))
+            rm(tempn, temp_result)
             break
-        })
+        } else {
+            print("Failed to read file with either format")
+        }
+    }
+
+    # Check if we successfully got the column names
+    if (is.null(ch_names)) {
+        stop("Could not read column names from any file in the directory. Please check file format and contents.")
     }
 
     ch_selected <- ch_names[-which(ch_names == "Time")]
@@ -76,30 +149,33 @@ collatedata <- function(file_path) {
             function(p) {
                 tryCatch(
                     {
-                        data.table::fread(
-                            list.files(
-                                paste0("./", dname, "/", folds[f]),
-                                full.name = TRUE
-                            )[p],
-                            skip = 1L
-                        )
+                        if (file_format == "semicolon") {
+                            data <- data.table::fread(
+                                list.files(paste0("./", dname, "/", folds[f]), full.name = TRUE)[p],
+                                skip = 1L
+                            )
+                        } else {
+                            data <- data.table::fread(
+                                list.files(paste0("./", dname, "/", folds[f]), full.name = TRUE)[p]
+                            )
+                        }
+                        if (file_format == "space") {
+                            colnames(data) <- ch_names
+                        }
+                        return(data)
                     },
                     warning = function(w) {
-                        message(
-                            paste(
-                                "Empty csv file was detected: ", folds[f],
-                                sprintf("_%02.0f.csv", p),
-                                sep = ""
-                            )
-                        )
+                        message(paste("Empty csv file was detected: ", folds[f],
+                            sprintf("_%02.0f.csv", p),
+                            sep = ""
+                        ))
                         return(data.table::data.table(
                             matrix(0, ncol = ncol(temp), nrow = nrow(temp))
                         ))
                     }
                 )
             }
-        )) # read csvs and add to list
-        # update progress bar
+        ))
         print(sprintf("Reading data: %.0f%%", f / nfold * 100))
     }
 
