@@ -1,10 +1,22 @@
+if (getRversion() >= "2.15.1") {
+    utils::globalVariables(c(
+        "Time", "X2", "tx", "N", "count", "hr", "ACF", "ix", "win",
+        "start_int", "s", "e", "ti", "wACF", "whr", "."
+    ))
+}
+
 #' @title CardiacDP - computeHR()
 #' @description Employing the autocorrelation function (ACF) with a genetic algorithm framework to locate periodic sub-sequences within each sequence. From the candidate heart rates of these sub-sequences, the final results are either evaluated based on the autocorrelation value or a tracking index (TI).
 #' @importFrom foreach %dopar%
 #' @importFrom data.table :=
 #' @importFrom data.table .N
 #' @importFrom dplyr %>%
+#' @importFrom dplyr arrange
+#' @importFrom dplyr top_n
+#' @importFrom dplyr filter
 #' @importFrom data.table .SD
+#' @importFrom data.table fread
+#' @importFrom data.table rbindlist
 #' @importFrom utils unzip
 #' @importFrom stats lm
 #' @importFrom stats qnorm
@@ -14,6 +26,29 @@
 #' @importFrom stats na.omit
 #' @importFrom stats na.pass
 #' @importFrom stats runif
+#' @importFrom stats acf
+#' @importFrom stringr str_detect
+#' @importFrom parallel detectCores
+#' @importFrom parallel makeCluster
+#' @importFrom parallel stopCluster
+#' @importFrom doParallel registerDoParallel
+#' @importFrom doParallel stopImplicitCluster
+#' @importFrom foreach foreach
+#' @importFrom purrr transpose
+#' @importFrom RColorBrewer brewer.pal
+#' @importFrom ggplot2 ggplot
+#' @importFrom ggplot2 geom_point
+#' @importFrom ggplot2 aes
+#' @importFrom ggplot2 scale_fill_manual
+#' @importFrom ggplot2 scale_y_continuous
+#' @importFrom ggplot2 scale_x_continuous
+#' @importFrom ggplot2 theme_set
+#' @importFrom ggplot2 theme_linedraw
+#' @importFrom ggplot2 theme_update
+#' @importFrom ggplot2 element_text
+#' @importFrom ggplot2 element_line
+#' @importFrom ggplot2 element_blank
+#' @importFrom ggplot2 element_rect
 #' @param file_path Designate the path to your file, must be a .zip or .csv file
 #' @param reduce_res Time interval of reduced resolution (seconds), by default 0.01
 #' @param pop_size Number of populations used in the genetic algorithm, by default 10L
@@ -47,6 +82,10 @@
 computeHR <- function(
     file_path, reduce_res = 0.01, pop_size = 10L, max_gen = 20L,
     patience = 2L, an_in = 1, acf_thres = 0.5, lr_thres = 0.7) {
+    # Import required operators
+    `%dopar%` <- foreach::`%dopar%`
+    `%>%` <- dplyr::`%>%`
+
     # Check if file_path is a CSV or ZIP file
     if (stringr::str_detect(file_path, ".csv")) {
         # check if file has "Time" column
@@ -289,7 +328,7 @@ computeHR <- function(
             })), 0, wait + 1)
 
             # break loop if an individual equals the entire sequence, or the patience counter has reached the tolerance level
-            if (any(pop$f == (length(segment) - 1L)) | wait == patience) break
+            if (any(pop$f == (length(segment) - 1L)) || wait == patience) break
 
             # if all individuals are unfit, revert to the previous population
             if (all(pop$f == 1)) pop <- last_pop
@@ -501,7 +540,38 @@ computeHR <- function(
             legend.key = ggplot2::element_blank(),
             plot.background = ggplot2::element_blank()
         )
-        return(as.list(
+
+        # Check if there's any valid data to plot
+        if (nrow(dt) == 0 || all(is.na(dt$hr)) || all(is.na(dt$ACF))) {
+            # Create an empty plot with appropriate labels when no data is available
+            return(
+                ggplot2::ggplot() +
+                    ggplot2::annotate("text",
+                        x = 0.5, y = 0.5,
+                        label = "No periodic sub-sequences found\nNo data to display",
+                        size = 5, hjust = 0.5, vjust = 0.5
+                    ) +
+                    ggplot2::scale_y_continuous(
+                        name = "Heart rate (bpm)",
+                        breaks = seq(0, 50, 10),
+                        limits = c(0, 50),
+                        expand = c(0, 0)
+                    ) +
+                    ggplot2::scale_x_continuous(
+                        name = "Time (min)",
+                        breaks = seq(0, 30, 10),
+                        limits = c(0, 30),
+                        expand = c(0, 0)
+                    ) +
+                    ggplot2::theme(
+                        panel.grid = ggplot2::element_blank(),
+                        axis.text = ggplot2::element_blank(),
+                        axis.ticks = ggplot2::element_blank()
+                    )
+            )
+        }
+
+        return(
             ggplot2::ggplot() +
                 ggplot2::geom_point(
                     data = dt,
@@ -534,7 +604,7 @@ computeHR <- function(
                     limits = c(0, ceiling(max(dt[, ix], na.rm = TRUE) / 30) * 30),
                     expand = c(0, 0)
                 )
-        ))
+        )
     }
 
     ## main function

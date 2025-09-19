@@ -7,7 +7,7 @@ Description: An algorithm developed to efficiently and accurately process comple
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 Depends:
   R (>= 4.3.0)
 Imports:
