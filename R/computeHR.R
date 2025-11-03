@@ -88,29 +88,33 @@ computeHR <- function(
     `%>%` <- dplyr::`%>%`
 
     # Check if file_path is a CSV or ZIP file
-    if (stringr::str_detect(file_path, ".csv")) {
+    if (stringr::str_detect(file_path, "\\.csv$")) {
+        # Read file content as text with Windows-1252 encoding
+        file_text <- paste(readLines(file_path, encoding = "Windows-1252"), collapse = "\n")
         # check if file has "Time" column
+        temp_check <- data.table::fread(text = file_text)
         if (!any(stringr::str_detect(
-            colnames(data.table::fread(file_path)), "Time"
+            colnames(temp_check), "Time"
         ))) {
             stop("File must have a column named 'Time'.")
         }
         # check if file has at least 2 columns
-        if (length(colnames(data.table::fread(file_path))) < 2) {
+        if (length(colnames(temp_check)) < 2) {
             stop("File must have at least 2 columns.")
         }
         # check if file has at least 2 rows
-        if (nrow(data.table::fread(file_path)) < 2) {
+        if (nrow(temp_check) < 2) {
             stop("File must have at least 2 rows.")
         }
         # If it's a CSV file, read it into a data.table
-        rawmaster <- data.table::fread(file_path)
+        # Reuse the already read data instead of reading again
+        rawmaster <- temp_check
 
         # convert data into numeric class
         suppressWarnings(
             rawmaster[, colnames(rawmaster) := lapply(.SD, as.numeric)]
         )
-    } else if (stringr::str_detect(file_path, ".zip")) {
+    } else if (stringr::str_detect(file_path, "\\.zip$")) {
         # If it's a ZIP file, call the data_preparation function
         rawmaster <- collatedata(file_path)
     } else {

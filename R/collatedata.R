@@ -11,7 +11,7 @@ collatedata <- function(file_path) {
     if (!file.exists(file_path)) {
         stop("File does not exist at the given path.")
     }
-    if (!stringr::str_detect(file_path, ".zip")) {
+    if (!stringr::str_detect(file_path, "\\.zip$")) {
         stop("File is not a zip file.")
     }
 
@@ -88,15 +88,32 @@ collatedata <- function(file_path) {
             {
                 # Try first format (semicolon/comma separated with multiple header rows)
                 print("Attempting semicolon/comma format...")
-                # First read just the headers
-                header_row <- suppressWarnings(readLines(tempn, n = 1L))
+                # First read just the headers with Windows-1252 encoding
+                header_row <- suppressWarnings(readLines(tempn, n = 1L, encoding = "Windows-1252"))
+                print(paste("Header row:", header_row))
                 # Then read data skipping the headers
-                temp_data <- suppressWarnings(data.table::fread(tempn, skip = 1L))
-                if (nrow(temp_data) > 0) {
+                # Read file content as text with Windows-1252 encoding
+                file_text <- paste(readLines(tempn, encoding = "Windows-1252"), collapse = "\n")
+                temp_data <- suppressWarnings(data.table::fread(text = file_text, skip = 1L))
+                if (nrow(temp_data) > 0 && ncol(temp_data) > 0) {
                     # Parse column names from header line
                     ch_names <- unlist(strsplit(header_row, "[,;]"))
                     ch_names <- trimws(ch_names)
-                    list(data = temp_data, names = ch_names, format = "semicolon")
+                    print(paste("Parsed column names:", paste(ch_names, collapse = ", ")))
+
+                    # Translate Chinese column names to English
+                    ch_names <- gsub("^时间$", "Time", ch_names) # 时间 -> Time
+                    ch_names <- gsub("^通道\\s*([A-Z])$", "Channel \\1", ch_names) # 通道 A -> Channel A
+                    ch_names <- gsub("^通道([A-Z])$", "Channel \\1", ch_names) # 通道A -> Channel A
+                    print(paste("Translated column names:", paste(ch_names, collapse = ", ")))
+
+                    print(paste("Number of columns in data:", ncol(temp_data)))
+                    # Check if column count matches
+                    if (length(ch_names) == ncol(temp_data) && any(ch_names == "Time")) {
+                        list(data = temp_data, names = ch_names, format = "semicolon")
+                    } else {
+                        NULL
+                    }
                 } else {
                     NULL
                 }
@@ -104,12 +121,27 @@ collatedata <- function(file_path) {
             error = function(e) {
                 # Try second format (space separated)
                 print("Attempting space format...")
-                temp_data <- suppressWarnings(data.table::fread(tempn))
-                if (nrow(temp_data) > 0) {
+                # Read file content as text with Windows-1252 encoding
+                file_text <- paste(readLines(tempn, encoding = "Windows-1252"), collapse = "\n")
+                temp_data <- suppressWarnings(data.table::fread(text = file_text))
+                if (nrow(temp_data) > 0 && ncol(temp_data) > 0) {
                     # Extract column names without units
                     ch_names <- colnames(temp_data)
                     ch_names <- gsub("\\s*\\([^\\)]+\\)", "", ch_names)
-                    list(data = temp_data, names = ch_names, format = "space")
+                    print(paste("Column names from space format:", paste(ch_names, collapse = ", ")))
+
+                    # Translate Chinese column names to English
+                    ch_names <- gsub("^时间$", "Time", ch_names) # 时间 -> Time
+                    ch_names <- gsub("^通道\\s*([A-Z])$", "Channel \\1", ch_names) # 通道 A -> Channel A
+                    ch_names <- gsub("^通道([A-Z])$", "Channel \\1", ch_names) # 通道A -> Channel A
+                    print(paste("Translated column names:", paste(ch_names, collapse = ", ")))
+
+                    # Check if Time column exists
+                    if (any(ch_names == "Time")) {
+                        list(data = temp_data, names = ch_names, format = "space")
+                    } else {
+                        NULL
+                    }
                 } else {
                     NULL
                 }
@@ -160,15 +192,17 @@ collatedata <- function(file_path) {
             function(p) {
                 tryCatch(
                     {
+                        # Read file content as text with Windows-1252 encoding
+                        file_text <- paste(readLines(dir_files[p], encoding = "Windows-1252"), collapse = "\n")
                         if (file_format == "semicolon") {
                             data <- data.table::fread(
-                                dir_files[p],
+                                text = file_text,
                                 skip = 1L
                             )
                             colnames(data) <- ch_names
                         } else {
                             data <- data.table::fread(
-                                dir_files[p]
+                                text = file_text
                             )
                             colnames(data) <- ch_names
                         }
