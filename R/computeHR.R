@@ -1,7 +1,7 @@
 if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
         "Time", "X2", "tx", "N", "count", "hr", "ACF", "ix", "win",
-        "start_int", "s", "e", "ti", "wACF", "whr", "."
+        "start_int", "s", "e", "ti", "wACF", "whr", "Time_min", "."
     ))
 }
 
@@ -57,7 +57,7 @@ if (getRversion() >= "2.15.1") {
 #' @param an_in Analysis interval (length of a sequence; in minute), by default 1
 #' @param acf_thres Threshold used in ACF to classify periodic oscillations from aperiodic noises, by default 0.5
 #' @param lr_thres Linear regression r-sq threshold in extrapolating the tracking index, by default 0.7
-#' @return The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR), the weighted heart rate per sequence (weightedHR) and a plot (plot).
+#' @return The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR with Time_min column), the weighted heart rate per sequence (weightedHR with Time_min column) and a plot (plot). Additionally, CSV files (subseqHR and weightedHR) and PNG files (plots) are automatically saved to the current working directory for each channel and method.
 #' @export computeHR
 #' @examples \dontrun{
 #' # use the default parameters to analyse a zip file
@@ -80,8 +80,9 @@ if (getRversion() >= "2.15.1") {
 #' computeHR("data.csv", pop_size = 20L, an_in = 5, acf_thres = 0.6)
 #' }
 computeHR <- function(
-    file_path, reduce_res = 0.01, pop_size = 10L, max_gen = 20L,
-    patience = 2L, an_in = 1, acf_thres = 0.5, lr_thres = 0.7) {
+  file_path, reduce_res = 0.01, pop_size = 10L, max_gen = 20L,
+  patience = 2L, an_in = 1, acf_thres = 0.5, lr_thres = 0.7
+) {
     # Import required operators
     `%dopar%` <- foreach::`%dopar%`
     `%>%` <- dplyr::`%>%`
@@ -164,7 +165,7 @@ computeHR <- function(
                     xp[i] <- which.max(x[x1[i]:x2[i]]) + x1[i] - 1
                     xv[i] <- x[xp[i]]
                 },
-                error = function(e) { }
+                error = function(e) {}
             )
         }
         inds <- which(
@@ -575,7 +576,7 @@ computeHR <- function(
             ggplot2::ggplot() +
                 ggplot2::geom_point(
                     data = dt,
-                    ggplot2::aes(x = ix, y = hr, fill = factor(floor(ACF * 10) / 10)),
+                    ggplot2::aes(x = Time_min, y = hr, fill = factor(floor(ACF * 10) / 10)),
                     colour = "black", shape = 21, size = 4, alpha = .8
                 ) +
                 ggplot2::scale_fill_manual(
@@ -600,8 +601,8 @@ computeHR <- function(
                 ) +
                 ggplot2::scale_x_continuous(
                     name = "Time (min)",
-                    breaks = seq(0, ceiling(max(dt[, ix], na.rm = TRUE) / 30) * 30, 30),
-                    limits = c(0, ceiling(max(dt[, ix], na.rm = TRUE) / 30) * 30),
+                    breaks = seq(0, ceiling(max(dt[, Time_min], na.rm = TRUE) / 30) * 30, 30),
+                    limits = c(0, ceiling(max(dt[, Time_min], na.rm = TRUE) / 30) * 30),
                     expand = c(0, 0)
                 )
         )
@@ -669,8 +670,15 @@ computeHR <- function(
         for (channel in ch_selected) {
             ## calculate heart rate for each channel
 
-            # indicate which channel is being analyzed
-            print(sprintf("Calculating heart rate: %s...", channel))
+            # Calculate actual duration for this channel
+            channel_duration <- round(master[nrow(master), Time] / 60, digits = 1)
+            n_sequences <- nrow(windex)
+
+            # indicate which channel is being analyzed with duration info
+            print(sprintf(
+                "Calculating heart rate: %s (Duration: %s mins, Sequences: %d)...",
+                channel, channel_duration, n_sequences
+            ))
 
             ncore <- parallel::detectCores() - 1L
             cl <- parallel::makeCluster(ncore) # parallelize
@@ -712,13 +720,17 @@ computeHR <- function(
                     res = raw_res
                 )
             }
+            # Add Time_min column (start of analysis interval for sub-sequences)
+            byACFdt$Time_min <- (byACFdt$ix - 1) * an_in
             wACFdt <- cbind(
                 data.table::data.table(ix = unique(byACFdt[["ix"]])),
                 data.table::rbindlist(lapply(
                     unique(byACFdt[["ix"]]), function(x) weight(byACFdt[ix == x, ])
                 ))
             )
-            ACFplot <- pp(wACFdt[, .(ix = ix, ACF = wACF, hr = whr)])
+            # Add Time_min column (midpoint of analysis interval)
+            wACFdt$Time_min <- (wACFdt$ix - 0.5) * an_in
+            ACFplot <- pp(wACFdt[, .(Time_min = Time_min, ACF = wACF, hr = whr)])
 
             # with tracking index
             byTIdt <- cbind(HRbyTI(out), data.table::data.table(res = actual_new_res))
@@ -734,13 +746,17 @@ computeHR <- function(
                     res = raw_res
                 )
             }
+            # Add Time_min column (start of analysis interval for sub-sequences)
+            byTIdt$Time_min <- (byTIdt$ix - 1) * an_in
             wTIdt <- cbind(
                 data.table::data.table(ix = unique(byTIdt[["ix"]])),
                 data.table::rbindlist(lapply(
                     unique(byTIdt[["ix"]]), function(x) weight(byTIdt[ix == x, ])
                 ))
             )
-            TIplot <- pp(wTIdt[, .(ix = ix, ACF = wACF, hr = whr)])
+            # Add Time_min column (midpoint of analysis interval)
+            wTIdt$Time_min <- (wTIdt$ix - 0.5) * an_in
+            TIplot <- pp(wTIdt[, .(Time_min = Time_min, ACF = wACF, hr = whr)])
 
 
             output$finalsubseq[[channel]] <- out[["final"]] # indices of the final sub-sequences
@@ -755,6 +771,55 @@ computeHR <- function(
                 weightedHR = wTIdt,
                 plot = TIplot
             )
+
+            # Save CSV and PNG files
+            # Sanitize channel name for file naming (replace spaces with underscores)
+            channel_name <- gsub(" ", "_", channel)
+            channel_name <- gsub("[^A-Za-z0-9_-]", "_", channel_name)
+
+            # Save CSV files for ACF method
+            data.table::fwrite(
+                byACFdt,
+                file = paste0(channel_name, "_ACF_subseqHR.csv"),
+                na = "NA"
+            )
+            data.table::fwrite(
+                wACFdt,
+                file = paste0(channel_name, "_ACF_weightedHR.csv"),
+                na = "NA"
+            )
+
+            # Save CSV files for TI method
+            data.table::fwrite(
+                byTIdt,
+                file = paste0(channel_name, "_TI_subseqHR.csv"),
+                na = "NA"
+            )
+            data.table::fwrite(
+                wTIdt,
+                file = paste0(channel_name, "_TI_weightedHR.csv"),
+                na = "NA"
+            )
+
+            # Save PNG files
+            ggplot2::ggsave(
+                filename = paste0(channel_name, "_ACF_plot.png"),
+                plot = ACFplot,
+                width = 10,
+                height = 6,
+                dpi = 300,
+                units = "in"
+            )
+            ggplot2::ggsave(
+                filename = paste0(channel_name, "_TI_plot.png"),
+                plot = TIplot,
+                width = 10,
+                height = 6,
+                dpi = 300,
+                units = "in"
+            )
+
+            print(sprintf("Saved CSV and PNG files for %s", channel))
         }
         return(output)
     }

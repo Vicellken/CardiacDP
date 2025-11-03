@@ -22,12 +22,12 @@ CardiacDP can automatically read and collate heart rate data, and then
 employing the autocorrelation function (ACF) with a genetic algorithm framework to locate periodic sub-sequences within each sequence. From the candidate heart rates of these sub-sequences, the final results are either evaluated based on the autocorrelation value or a tracking index (TI).
 
 ## Test coverage
+
 ```
 CardiacDP Coverage: 88.36%
 R/collatedata.R: 87.91%
 R/computeHR.R: 88.44%
 ```
-
 
 ## Package structure
 
@@ -37,7 +37,7 @@ knitr::include_graphics("pkg_str.png")
 
 ## Installation
 
-``` r
+```r
 install.packages("CardiacDP")
 
 # Or the source package from GitHub:
@@ -66,7 +66,6 @@ collatedata(file_path = "../20210518A.zip")
 # use the default parameters to analyse a test file
 output <- computeHR("../20210518A.csv")
 ```
-
 
 The user can then access the output by the channel name. finalsubseq is a list showing the positions and durations of the final sub-sequences determined for each sequence. They are presented as data tables (s = start index of the sub-sequence; e = end index of the sub-sequence; p = which of the initial population the sub-sequence is derived from; and f = duration of the sub-sequence), the rows of which represent separate final sub-sequences. The example below shows the first five sequences (e.g. [[4]] indicates at the 4th minute there are three final sub-sequences).
 
@@ -97,9 +96,104 @@ output[["results_TI"]][["Channel A"]]
 ```
 
 ## Interpret results
-| Variable | Content |
-|---------|---------|
-| finalsubseq  | A list of positions and durations of the final periodic sub-sequences  |
-| candidateHR  | A list of candidate heart rates extracted from ACF for each sub-sequence  |
-| results_ACF | Results obtained from evaluating the candidate heart rates of each sub-sequence based on autocorrelation values (i.e. following the “ACF + GA” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
-| results_TI | Results obtained from evaluating the candidate heart rates of each sub-sequence using a tracking index (i.e. following the “ACF + GA + TI” approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
+
+| Variable    | Content                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| finalsubseq | A list of positions and durations of the final periodic sub-sequences                                                                                                                                                                                                                                                                                                                                                                       |
+| candidateHR | A list of candidate heart rates extracted from ACF for each sub-sequence                                                                                                                                                                                                                                                                                                                                                                    |
+| results_ACF | Results obtained from evaluating the candidate heart rates of each sub-sequence based on autocorrelation values (i.e. following the "ACF + GA" approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time |
+| results_TI  | Results obtained from evaluating the candidate heart rates of each sub-sequence using a tracking index (i.e. following the "ACF + GA + TI" approach as described in the main manuscript). Consisted of three items: 1) subseqHR: a list of sub-sequences and the corresponding heart rates and durations; 2) weightedHR: a list of final heart rates per sequence after weighing; and 3) plot: a plot of final heart rates against time     |
+
+## Automatically saved files
+
+The `computeHR` function automatically saves analysis results to CSV and PNG files in the current working directory for post-analysis:
+
+### CSV Files
+
+For each channel and method (ACF and TI), the following CSV files are saved:
+
+- `{Channel}_ACF_subseqHR.csv` - Details of sub-sequences with heart rates (ACF method)
+- `{Channel}_ACF_weightedHR.csv` - Weighted heart rates per analysis interval (ACF method)
+- `{Channel}_TI_subseqHR.csv` - Details of sub-sequences with heart rates (TI method)
+- `{Channel}_TI_weightedHR.csv` - Weighted heart rates per analysis interval (TI method)
+
+**Note:** Channel names with spaces (e.g., "Channel A") are converted to underscores (e.g., "Channel_A") in filenames.
+
+### PNG Files
+
+For each channel and method, heart rate plots are saved:
+
+- `{Channel}_ACF_plot.png` - Heart rate plot (ACF method)
+- `{Channel}_TI_plot.png` - Heart rate plot (TI method)
+
+### Column descriptions
+
+**weightedHR CSV files** contain:
+
+- `ix` - Sequence index (1, 2, 3, ...)
+- `Time_min` - Time in minutes (midpoint of analysis interval = (ix - 0.5) × analysis_interval)
+- `wACF` - Weighted autocorrelation value
+- `whr` - Weighted heart rate in beats per minute (can be NA)
+
+**subseqHR CSV files** contain:
+
+- `ix` - Sequence index
+- `win` - Sub-sequence window number within the sequence
+- `s`, `e`, `p`, `f` - Sub-sequence parameters (start, end, population, fitness)
+- `ACF` - Autocorrelation value
+- `lag` - Time lag
+- `hr` - Heart rate in beats per minute (can be NA)
+- `res` - Resolution used
+- `Time_min` - Time in minutes (start of analysis interval = (ix - 1) × analysis_interval)
+
+## Reproducing plots from saved CSV files
+
+The saved CSV files contain all the data needed to reproduce the heart rate plots. Use the **weightedHR** CSV files for plotting:
+
+```{r reproduce plot, eval=FALSE}
+library(ggplot2)
+library(RColorBrewer)
+library(data.table)
+
+# Read the saved weighted heart rate data
+data <- fread("Channel_A_TI_weightedHR.csv")
+
+# Create the plot (matching the package output)
+palette <- brewer.pal(n = 11, name = "RdYlBu")
+names(palette) <- seq(0, 10, 1) / 10
+
+ggplot() +
+  geom_point(
+    data = data,
+    aes(x = Time_min, y = whr, fill = factor(floor(wACF * 10) / 10)),
+    colour = "black", shape = 21, size = 4, alpha = 0.8
+  ) +
+  scale_fill_manual(
+    name = "ACF", values = palette, na.value = NA,
+    na.translate = FALSE, guide = "legend"
+  ) +
+  scale_y_continuous(
+    name = "Heart rate (bpm)",
+    breaks = seq(0, ceiling(max(data$whr, na.rm = TRUE) / 50) * 50, 50),
+    limits = c(0, ceiling(max(data$whr, na.rm = TRUE) / 50) * 50),
+    expand = c(0, 0)
+  ) +
+  scale_x_continuous(
+    name = "Time (min)",
+    breaks = seq(0, ceiling(max(data$Time_min, na.rm = TRUE) / 30) * 30, 30),
+    limits = c(0, ceiling(max(data$Time_min, na.rm = TRUE) / 30) * 30),
+    expand = c(0, 0)
+  ) +
+  theme_linedraw() +
+  theme(
+    text = element_text(size = 12, colour = "black"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(fill = NA, colour = "black", linewidth = 1)
+  )
+```
+
+**Key columns for plotting:**
+
+- **X-axis:** `Time_min` - Time in minutes
+- **Y-axis:** `whr` - Weighted heart rate (bpm)
+- **Fill color:** `wACF` - Weighted autocorrelation value (colored by discrete bins)

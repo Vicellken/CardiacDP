@@ -57,7 +57,12 @@ collatedata <- function(file_path) {
         folders = folds,
         pages = sapply(
             as.list(paste0("./", dname, "/", folds)),
-            function(x) length(list.files(x, full.name = FALSE))
+            function(x) {
+                files <- list.files(x, full.name = FALSE)
+                # Filter out generated output files
+                files <- files[!grepl("^Channel_.*\\.(csv|png)$", files)]
+                length(files)
+            }
         )
     )
     # Initialize ch_names as NULL before the loop
@@ -65,8 +70,10 @@ collatedata <- function(file_path) {
     temp <- NULL
     file_format <- NULL
 
-    # Get list of files in first directory
+    # Get list of files in first directory, excluding generated output files
     first_dir_files <- list.files(paste0("./", dname, "/", folds[1]), full.name = TRUE)
+    # Filter out generated CSV files (those starting with "Channel_" or ending with specific patterns)
+    first_dir_files <- first_dir_files[!grepl("^.*/Channel_.*\\.(csv|png)$", first_dir_files)]
     if (length(first_dir_files) == 0) {
         stop("No files found in directory: ", paste0("./", dname, "/", folds[1]))
     }
@@ -79,11 +86,16 @@ collatedata <- function(file_path) {
         # Try reading with both formats
         temp_result <- tryCatch(
             {
-                # Try first format (semicolon separated)
-                print("Attempting semicolon format...")
+                # Try first format (semicolon/comma separated with multiple header rows)
+                print("Attempting semicolon/comma format...")
+                # First read just the headers
+                header_row <- suppressWarnings(readLines(tempn, n = 1L))
+                # Then read data skipping the headers
                 temp_data <- suppressWarnings(data.table::fread(tempn, skip = 1L))
                 if (nrow(temp_data) > 0) {
-                    ch_names <- suppressWarnings(colnames(data.table::fread(tempn)))
+                    # Parse column names from header line
+                    ch_names <- unlist(strsplit(header_row, "[,;]"))
+                    ch_names <- trimws(ch_names)
                     list(data = temp_data, names = ch_names, format = "semicolon")
                 } else {
                     NULL
@@ -129,11 +141,6 @@ collatedata <- function(file_path) {
         paste0("Zipped file name: ", dname),
         paste0("Number of files: ", nfold),
         data_str,
-        paste0(
-            "Total duration: ",
-            round(temp$Time[nrow(temp)] * sum(data_str$pages) / 60, digits = 0),
-            " mins"
-        ),
         paste0("Number of channels: ", length(ch_selected)),
         paste0("Names of channels: ", paste(ch_selected, collapse = ", "))
     ))
@@ -144,22 +151,25 @@ collatedata <- function(file_path) {
     rawmaster <- list() # initialize master data.table
     for (f in 1:nfold) {
         ## for each directory
+        # Get all files and filter out generated output files
+        dir_files <- list.files(paste0("./", dname, "/", folds[f]), full.name = TRUE)
+        dir_files <- dir_files[!grepl("^.*/Channel_.*\\.(csv|png)$", dir_files)]
+
         rawmaster <- c(rawmaster, lapply(
-            as.list(1:data_str$pages[f]),
+            as.list(seq_along(dir_files)),
             function(p) {
                 tryCatch(
                     {
                         if (file_format == "semicolon") {
                             data <- data.table::fread(
-                                list.files(paste0("./", dname, "/", folds[f]), full.name = TRUE)[p],
+                                dir_files[p],
                                 skip = 1L
                             )
+                            colnames(data) <- ch_names
                         } else {
                             data <- data.table::fread(
-                                list.files(paste0("./", dname, "/", folds[f]), full.name = TRUE)[p]
+                                dir_files[p]
                             )
-                        }
-                        if (file_format == "space") {
                             colnames(data) <- ch_names
                         }
                         return(data)
@@ -182,8 +192,17 @@ collatedata <- function(file_path) {
     print("Finalizing...")
 
     # bind data tables into one master data table
-    rawmaster <- data.table::rbindlist(rawmaster)
-    names(rawmaster) <- ch_names # assign column names
+    rawmaster <- data.table::rbindlist(rawmaster, fill = TRUE)
+    # Only assign column names if the count matches
+    if (ncol(rawmaster) == length(ch_names)) {
+        names(rawmaster) <- ch_names # assign column names
+    } else {
+        stop(sprintf(
+            "Column count mismatch: expected %d columns, but got %d columns after rbindlist.
+                     This might indicate inconsistent file formats or column counts in the input files.",
+            length(ch_names), ncol(rawmaster)
+        ))
+    }
     rawmaster <- rawmaster[which(!is.na(rawmaster[, Time])), ] # remove extra rows
 
     # convert data into numeric class
@@ -193,6 +212,13 @@ collatedata <- function(file_path) {
 
     # re-assign time
     rawmaster[, Time := seq(0, by = raw_res, length.out = nrow(rawmaster))]
+
+    # Print actual total duration based on final time value
+    print(paste0(
+        "Total duration: ",
+        round(rawmaster[nrow(rawmaster), Time] / 60, digits = 1),
+        " mins"
+    ))
 
     # remove extracted files from the working directory
     unlink(paste0("./", dname), recursive = TRUE)
