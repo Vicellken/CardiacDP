@@ -226,7 +226,7 @@ collatedata <- function(file_path) {
     print("Finalizing...")
 
     # bind data tables into one master data table
-    rawmaster <- data.table::rbindlist(rawmaster, fill = TRUE)
+    rawmaster <- data.table::rbindlist(rawmaster)
     # Only assign column names if the count matches
     if (ncol(rawmaster) == length(ch_names)) {
         names(rawmaster) <- ch_names # assign column names
