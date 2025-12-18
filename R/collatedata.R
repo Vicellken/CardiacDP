@@ -58,7 +58,7 @@ collatedata <- function(file_path) {
         pages = sapply(
             as.list(paste0("./", dname, "/", folds)),
             function(x) {
-                files <- list.files(x, full.name = FALSE)
+                files <- list.files(x, full.names = FALSE)
                 # Filter out generated output files
                 files <- files[!grepl("^Channel_.*\\.(csv|png)$", files)]
                 length(files)
@@ -71,7 +71,7 @@ collatedata <- function(file_path) {
     file_format <- NULL
 
     # Get list of files in first directory, excluding generated output files
-    first_dir_files <- list.files(paste0("./", dname, "/", folds[1]), full.name = TRUE)
+    first_dir_files <- list.files(paste0("./", dname, "/", folds[1]), full.names = TRUE)
     # Filter out generated CSV files (those starting with "Channel_" or ending with specific patterns)
     first_dir_files <- first_dir_files[!grepl("^.*/Channel_.*\\.(csv|png)$", first_dir_files)]
     if (length(first_dir_files) == 0) {
@@ -102,9 +102,9 @@ collatedata <- function(file_path) {
                     print(paste("Parsed column names:", paste(ch_names, collapse = ", ")))
 
                     # Translate Chinese column names to English
-                    ch_names <- gsub("^时间$", "Time", ch_names) # 时间 -> Time
-                    ch_names <- gsub("^通道\\s*([A-Z])$", "Channel \\1", ch_names) # 通道 A -> Channel A
-                    ch_names <- gsub("^通道([A-Z])$", "Channel \\1", ch_names) # 通道A -> Channel A
+                    ch_names <- gsub("^\u65f6\u95f4$", "Time", ch_names) # Chinese "Time" -> Time
+                    ch_names <- gsub("^\u901a\u9053\\s*([A-Z])$", "Channel \\1", ch_names) # Chinese "Channel A" -> Channel A
+                    ch_names <- gsub("^\u901a\u9053([A-Z])$", "Channel \\1", ch_names) # Chinese "ChannelA" -> Channel A
                     print(paste("Translated column names:", paste(ch_names, collapse = ", ")))
 
                     print(paste("Number of columns in data:", ncol(temp_data)))
@@ -131,9 +131,9 @@ collatedata <- function(file_path) {
                     print(paste("Column names from space format:", paste(ch_names, collapse = ", ")))
 
                     # Translate Chinese column names to English
-                    ch_names <- gsub("^时间$", "Time", ch_names) # 时间 -> Time
-                    ch_names <- gsub("^通道\\s*([A-Z])$", "Channel \\1", ch_names) # 通道 A -> Channel A
-                    ch_names <- gsub("^通道([A-Z])$", "Channel \\1", ch_names) # 通道A -> Channel A
+                    ch_names <- gsub("^\u65f6\u95f4$", "Time", ch_names) # Chinese "Time" -> Time
+                    ch_names <- gsub("^\u901a\u9053\\s*([A-Z])$", "Channel \\1", ch_names) # Chinese "Channel A" -> Channel A
+                    ch_names <- gsub("^\u901a\u9053([A-Z])$", "Channel \\1", ch_names) # Chinese "ChannelA" -> Channel A
                     print(paste("Translated column names:", paste(ch_names, collapse = ", ")))
 
                     # Check if Time column exists
@@ -184,7 +184,7 @@ collatedata <- function(file_path) {
     for (f in 1:nfold) {
         ## for each directory
         # Get all files and filter out generated output files
-        dir_files <- list.files(paste0("./", dname, "/", folds[f]), full.name = TRUE)
+        dir_files <- list.files(paste0("./", dname, "/", folds[f]), full.names = TRUE)
         dir_files <- dir_files[!grepl("^.*/Channel_.*\\.(csv|png)$", dir_files)]
 
         rawmaster <- c(rawmaster, lapply(
@@ -259,7 +259,7 @@ collatedata <- function(file_path) {
     ## end of read data
 
     # preview the data
-    str(rawmaster)
+    utils::str(rawmaster)
 
     # Save rawmaster to a CSV file
     data.table::fwrite(rawmaster, file = paste0(dirname(file_path), "/", dname, ".csv"))

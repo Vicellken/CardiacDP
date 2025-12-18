@@ -1,5 +1,5 @@
 Package: CardiacDP
-Title: Rapid automated cardiac data processing using autocorrelation, a genetic algorithm and a tracking index
+Title: Rapid Automated Cardiac Data Processing using Autocorrelation, a Genetic Algorithm and a Tracking Index
 Version: 0.3.2
 Authors@R: c(
   person(given = "Sarah",

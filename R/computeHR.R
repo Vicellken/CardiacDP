@@ -366,7 +366,7 @@ computeHR <- function(
 
     weight <- function(dt) { # calculate hr counts by weighting
         if (nrow(na.omit(dt)) > 1) { # multiple periodic sub-sequences
-            seqtally <- setNames(
+            seqtally <- stats::setNames(
                 data.table::data.table(table(
                     unlist(
                         apply(na.omit(dt), 1, function(x) seq(x[["s"]], x[["e"]], 1))
@@ -374,7 +374,7 @@ computeHR <- function(
                 )),
                 c("tx", "count")
             ) # count the occurrence
-            return(setNames(
+            return(stats::setNames(
                 data.table::data.table(t(apply(
                     apply(na.omit(dt), 1, function(x) {
                         c(x[["ACF"]], x[["hr"]]) * (seqtally[tx %in% seq(

@@ -87,7 +87,7 @@ output[["candidateHR"]][["Channel A"]]
 
 The final results after evaluating the candidate heart rates, checking for resolution and weighing for durations can eventually be obtained from results_ACF and results_TI. These results referred to evaluating the candidate heart rates by autocorrelation values (i.e. the “ACF + GA” approach) and the tracking index (i.e. the “ACF + GA +TI” approach) respectively. Each of them consists of 1) the details of the sub-sequences (subseqHR); 2) the weighted heart rate per sequence (weightedHR); and 3) a plot of weighted heart rate against time (plot).
 
-```{r final results}
+```{r final-results}
 ## results obtained from evaluating the candidate heart rates by autocorrelation values
 output[["results_ACF"]][["Channel A"]]
 

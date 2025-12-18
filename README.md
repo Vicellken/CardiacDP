@@ -48,7 +48,7 @@ install.packages("CardiacDP_0.3.2.tar.gz", repos = NULL, type = "source")
 
 ## Example
 
-#### see [User guidelines](./User%20guidelines.pdf) for detailed function descriptions
+#### see [User guidelines (PDF)](https://github.com/Vicellken/CardiacDP/blob/main/User%20guidelines.pdf) for detailed function descriptions
 
 </br>
 
@@ -254,7 +254,7 @@ output[["results_ACF"]][["Channel A"]]
 #> Warning: Removed 14 rows containing missing values (`geom_point()`).
 ```
 
-`<img src="man/figures/README-final results-1.png" width="100%" />`
+`<img src="man/figures/README-final-results-1.png" width="100%" />`
 
 ```r
 
@@ -292,7 +292,7 @@ output[["results_TI"]][["Channel A"]]
 #> Warning: Removed 16 rows containing missing values (`geom_point()`).
 ```
 
-`<img src="man/figures/README-final results-2.png" width="100%" />`
+`<img src="man/figures/README-final-results-2.png" width="100%" />`
 
 ## Interpret results
 

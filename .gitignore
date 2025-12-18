@@ -6,3 +6,5 @@
 /__MACOSX
 *.csv
 *.png
+/CardiacDP.Rcheck
+*.gz
