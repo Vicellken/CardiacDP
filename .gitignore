@@ -3,3 +3,8 @@
 .RData
 .Ruserdata
 .DS_Store
+/__MACOSX
+*.csv
+*.png
+/CardiacDP.Rcheck
+*.gz
