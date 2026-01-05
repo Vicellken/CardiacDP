@@ -57,35 +57,64 @@ if (getRversion() >= "2.15.1") {
 #' @param an_in Analysis interval (length of a sequence; in minute), by default 1
 #' @param acf_thres Threshold used in ACF to classify periodic oscillations from aperiodic noises, by default 0.5
 #' @param lr_thres Linear regression r-sq threshold in extrapolating the tracking index, by default 0.7
-#' @return The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR with Time_min column), the weighted heart rate per sequence (weightedHR with Time_min column) and a plot (plot). Additionally, CSV files (subseqHR and weightedHR) and PNG files (plots) are automatically saved to the current working directory for each channel and method.
+#' @param ncore Integer; number of CPU cores to use for the genetic algorithm. If NULL (default), uses `parallel::detectCores() - 1`. During `R CMD check`, cores are clamped to a small number to satisfy check limits.
+#' @param output_dir Optional directory to write CSV/PNG outputs when `save_outputs = TRUE`. If NULL, defaults to `tempdir()`.
+#' @param save_outputs Logical; if TRUE, write CSV/PNG outputs to `output_dir`. Default FALSE.
+#' @param verbose Logical; if TRUE, emit progress messages. Default FALSE.
+#' @return The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR with Time_min column), the weighted heart rate per sequence (weightedHR with Time_min column) and a plot (plot). If `save_outputs = TRUE`, file paths are recorded in `output$files`.
 #' @export computeHR
-#' @examples \dontrun{
+#' @examples \donttest{
 #' # use the default parameters to analyse a zip file
 #' # the collatedata function will be called automatically
-#' computeHR(file_path = "data.zip")
+#' zip_path <- system.file("extdata", "example.zip", package = "CardiacDP")
+#' computeHR(file_path = zip_path, save_outputs = FALSE)
 #' }
 #'
-#' @examples \dontrun{
+#' @examples \donttest{
 #' # use the default parameters to analyse a csv file
-#' computeHR(file_path = "data.csv")
+#' csv_path <- system.file("extdata", "example.csv", package = "CardiacDP")
+#' computeHR(file_path = csv_path, reduce_res = 0.1, save_outputs = FALSE)
 #' }
 #'
-#' @examples \dontrun{
+#' @examples \donttest{
 #' # use customized parameters to analyse a zip file
-#' computeHR("data.zip", reduce_res = 0.1, max_gen = 30L, lr_thres = 0.8)
+#' zip_path <- system.file("extdata", "example.zip", package = "CardiacDP")
+#' computeHR(zip_path, reduce_res = 0.1, max_gen = 30L, lr_thres = 0.8, save_outputs = FALSE)
 #' }
 #'
-#' @examples \dontrun{
+#' @examples \donttest{
 #' # use custom parameters to analyse a csv file
-#' computeHR("data.csv", pop_size = 20L, an_in = 5, acf_thres = 0.6)
+#' csv_path <- system.file("extdata", "example.csv", package = "CardiacDP")
+#' computeHR(csv_path, reduce_res = 0.1, pop_size = 20L, an_in = 1, acf_thres = 0.6, save_outputs = FALSE)
 #' }
 computeHR <- function(
   file_path, reduce_res = 0.01, pop_size = 10L, max_gen = 20L,
-  patience = 2L, an_in = 1, acf_thres = 0.5, lr_thres = 0.7
+  patience = 2L, an_in = 1, acf_thres = 0.5, lr_thres = 0.7,
+  ncore = NULL,
+  output_dir = NULL, save_outputs = FALSE, verbose = FALSE
 ) {
     # Import required operators
     `%dopar%` <- foreach::`%dopar%`
+    `%do%` <- foreach::`%do%`
     `%>%` <- dplyr::`%>%`
+
+    inform <- function(...) {
+        if (isTRUE(verbose)) message(...)
+    }
+
+    # CRAN check often sets _R_CHECK_LIMIT_CORES_; respect it to avoid spawning too many processes.
+    check_limit_raw <- Sys.getenv("_R_CHECK_LIMIT_CORES_", unset = "")
+    check_limit_set <- nzchar(check_limit_raw) &&
+        !(tolower(check_limit_raw) %in% c("false", "0"))
+    check_limit_num <- suppressWarnings(as.integer(check_limit_raw))
+    check_limit_max <- if (!is.na(check_limit_num)) check_limit_num else 2L
+    # Clamp to 1-2 when the env var is set (per CRAN check expectations)
+    check_limit_max <- max(1L, min(2L, check_limit_max))
+
+    if (isTRUE(save_outputs)) {
+        if (is.null(output_dir)) output_dir <- tempdir()
+        dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+    }
 
     # Check if file_path is a CSV or ZIP file
     if (stringr::str_detect(file_path, "\\.csv$")) {
@@ -435,18 +464,32 @@ computeHR <- function(
             ACF = as.numeric(NA), lag = as.numeric(NA), hr = as.numeric(NA)
         )
 
+        r_squared_from_fit <- function(fit, y) {
+            yhat <- stats::fitted(fit)
+            ss_res <- sum((y - yhat)^2)
+            ss_tot <- sum((y - mean(y))^2)
+            if (isTRUE(all.equal(ss_tot, 0))) {
+                return(1)
+            }
+            1 - (ss_res / ss_tot)
+        }
+
         for (i in seq_along(out[["counts"]])) {
             prev <- byTIdt[ix %in% (i - 5):(i - 1), .(ix, hr)]
-            est <- ifelse(nrow(na.omit(prev)) == 0,
-                NA,
-                ifelse(
-                    length(
-                        unique(na.omit(prev)[["ix"]])
-                    ) > 2 & summary(lm(hr ~ ix, prev))$r.squared >= lr_thres,
-                    predict(lm(hr ~ ix, prev), data.frame(ix = i)),
-                    median(prev$hr, na.rm = TRUE)
-                )
-            )
+            prev2 <- stats::na.omit(prev)
+            if (nrow(prev2) == 0) {
+                est <- NA_real_
+            } else if (length(unique(prev2[["ix"]])) > 2) {
+                fit <- stats::lm(hr ~ ix, prev2)
+                r2 <- r_squared_from_fit(fit, prev2[["hr"]])
+                if (!is.na(r2) && r2 >= lr_thres) {
+                    est <- as.numeric(stats::predict(fit, data.frame(ix = i)))
+                } else {
+                    est <- stats::median(prev2[["hr"]], na.rm = TRUE)
+                }
+            } else {
+                est <- stats::median(prev2[["hr"]], na.rm = TRUE)
+            }
             for (w in seq_along(out[["counts"]][[i]])) {
                 if (is.na(out[["counts"]][[i]][[w]][1, hr])) { # NA count
                     byTIdt[
@@ -679,34 +722,67 @@ computeHR <- function(
             n_sequences <- nrow(windex)
 
             # indicate which channel is being analyzed with duration info
-            print(sprintf(
+            inform(sprintf(
                 "Calculating heart rate: %s (Duration: %s mins, Sequences: %d)...",
                 channel, channel_duration, n_sequences
             ))
 
-            ncore <- parallel::detectCores() - 1L
-            cl <- parallel::makeCluster(ncore) # parallelize
-            doParallel::registerDoParallel(cl) # parallelize
+            ncore_auto <- max(1L, parallel::detectCores() - 1L)
+            ncore_req <- if (is.null(ncore)) ncore_auto else as.integer(ncore)
+            if (length(ncore_req) != 1L || is.na(ncore_req) || ncore_req < 1L) {
+                stop("`ncore` must be a positive integer or NULL.")
+            }
+
+            ncore_eff <- ncore_req
+            if (isTRUE(check_limit_set)) ncore_eff <- min(ncore_eff, check_limit_max)
+            ncore_eff <- min(ncore_eff, n_sequences)
+            use_parallel <- isTRUE(ncore_eff > 1L)
 
             # employ genetic algorithm to select periodic durations for heart rate computation
-            out <- purrr::transpose(
-                foreach::foreach(
-                    ti = seq_len(nrow(windex)),
-                    .packages = c("data.table", "dplyr")
-                ) %dopar% {
-                    ga(
-                        master = master[[channel]], hrdf = unlist(windex[ti, ]),
-                        initial_pop = initial_pop, pop_size = pop_size, max_gen = max_gen,
-                        mutation_step = mutation_step, thres = acf_thres, patience = patience
+            cl <- NULL
+            out <- tryCatch(
+                {
+                    if (use_parallel) {
+                        cl <- parallel::makeCluster(ncore_eff)
+                        doParallel::registerDoParallel(cl)
+                    }
+                    purrr::transpose(
+                        if (use_parallel) {
+                            foreach::foreach(
+                                ti = seq_len(nrow(windex)),
+                                .packages = c("data.table", "dplyr")
+                            ) %dopar% {
+                                ga(
+                                    master = master[[channel]], hrdf = unlist(windex[ti, ]),
+                                    initial_pop = initial_pop, pop_size = pop_size, max_gen = max_gen,
+                                    mutation_step = mutation_step, thres = acf_thres, patience = patience
+                                )
+                            }
+                        } else {
+                            foreach::foreach(
+                                ti = seq_len(nrow(windex)),
+                                .packages = c("data.table", "dplyr")
+                            ) %do% {
+                                ga(
+                                    master = master[[channel]], hrdf = unlist(windex[ti, ]),
+                                    initial_pop = initial_pop, pop_size = pop_size, max_gen = max_gen,
+                                    mutation_step = mutation_step, thres = acf_thres, patience = patience
+                                )
+                            }
+                        }
                     )
+                },
+                finally = {
+                    if (!is.null(cl)) {
+                        try(parallel::stopCluster(cl), silent = TRUE)
+                    }
+                    # Best-effort cleanup (no-op if none registered)
+                    try(doParallel::stopImplicitCluster(), silent = TRUE)
                 }
             )
 
-            parallel::stopCluster(cl) # de-parallelize
-            doParallel::stopImplicitCluster() # de-parallelize
-
             ## Generating the final output
-            print("Generating output...")
+            inform("Generating output...")
 
             # without tracking index (calculate HR based on max ACF)
             byACFdt <- cbind(
@@ -776,54 +852,52 @@ computeHR <- function(
                 plot = TIplot
             )
 
-            # Save CSV and PNG files
-            # Sanitize channel name for file naming (replace spaces with underscores)
-            channel_name <- gsub(" ", "_", channel)
-            channel_name <- gsub("[^A-Za-z0-9_-]", "_", channel_name)
+            # Optionally save CSV/PNG outputs (CRAN-safe: opt-in and default tempdir())
+            if (isTRUE(save_outputs)) {
+                # Sanitize channel name for file naming (replace spaces with underscores)
+                channel_name <- gsub(" ", "_", channel)
+                channel_name <- gsub("[^A-Za-z0-9_-]", "_", channel_name)
 
-            # Save CSV files for ACF method
-            data.table::fwrite(
-                byACFdt,
-                file = paste0(channel_name, "_ACF_subseqHR.csv"),
-                na = "NA"
-            )
-            data.table::fwrite(
-                wACFdt,
-                file = paste0(channel_name, "_ACF_weightedHR.csv"),
-                na = "NA"
-            )
+                acf_subseq_path <- file.path(output_dir, paste0(channel_name, "_ACF_subseqHR.csv"))
+                acf_weight_path <- file.path(output_dir, paste0(channel_name, "_ACF_weightedHR.csv"))
+                ti_subseq_path <- file.path(output_dir, paste0(channel_name, "_TI_subseqHR.csv"))
+                ti_weight_path <- file.path(output_dir, paste0(channel_name, "_TI_weightedHR.csv"))
+                acf_plot_path <- file.path(output_dir, paste0(channel_name, "_ACF_plot.png"))
+                ti_plot_path <- file.path(output_dir, paste0(channel_name, "_TI_plot.png"))
 
-            # Save CSV files for TI method
-            data.table::fwrite(
-                byTIdt,
-                file = paste0(channel_name, "_TI_subseqHR.csv"),
-                na = "NA"
-            )
-            data.table::fwrite(
-                wTIdt,
-                file = paste0(channel_name, "_TI_weightedHR.csv"),
-                na = "NA"
-            )
+                data.table::fwrite(byACFdt, file = acf_subseq_path, na = "NA")
+                data.table::fwrite(wACFdt, file = acf_weight_path, na = "NA")
+                data.table::fwrite(byTIdt, file = ti_subseq_path, na = "NA")
+                data.table::fwrite(wTIdt, file = ti_weight_path, na = "NA")
 
-            # Save PNG files
-            ggplot2::ggsave(
-                filename = paste0(channel_name, "_ACF_plot.png"),
-                plot = ACFplot,
-                width = 10,
-                height = 6,
-                dpi = 300,
-                units = "in"
-            )
-            ggplot2::ggsave(
-                filename = paste0(channel_name, "_TI_plot.png"),
-                plot = TIplot,
-                width = 10,
-                height = 6,
-                dpi = 300,
-                units = "in"
-            )
+                ggplot2::ggsave(
+                    filename = acf_plot_path,
+                    plot = ACFplot,
+                    width = 10,
+                    height = 6,
+                    dpi = 300,
+                    units = "in"
+                )
+                ggplot2::ggsave(
+                    filename = ti_plot_path,
+                    plot = TIplot,
+                    width = 10,
+                    height = 6,
+                    dpi = 300,
+                    units = "in"
+                )
 
-            print(sprintf("Saved CSV and PNG files for %s", channel))
+                if (is.null(output$files)) output$files <- list()
+                output$files[[channel]] <- list(
+                    ACF_subseqHR = acf_subseq_path,
+                    ACF_weightedHR = acf_weight_path,
+                    TI_subseqHR = ti_subseq_path,
+                    TI_weightedHR = ti_weight_path,
+                    ACF_plot = acf_plot_path,
+                    TI_plot = ti_plot_path
+                )
+                inform(sprintf("Saved CSV and PNG files for %s to %s", channel, output_dir))
+            }
         }
         return(output)
     }

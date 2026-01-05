@@ -12,7 +12,11 @@ computeHR(
   patience = 2L,
   an_in = 1,
   acf_thres = 0.5,
-  lr_thres = 0.7
+  lr_thres = 0.7,
+  ncore = NULL,
+  output_dir = NULL,
+  save_outputs = FALSE,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -31,32 +35,44 @@ computeHR(
 \item{acf_thres}{Threshold used in ACF to classify periodic oscillations from aperiodic noises, by default 0.5}
 
 \item{lr_thres}{Linear regression r-sq threshold in extrapolating the tracking index, by default 0.7}
+
+\item{ncore}{Integer; number of CPU cores to use for the genetic algorithm. If NULL (default), uses \code{parallel::detectCores() - 1}. During \verb{R CMD check}, cores are clamped to a small number to satisfy check limits.}
+
+\item{output_dir}{Optional directory to write CSV/PNG outputs when \code{save_outputs = TRUE}. If NULL, defaults to \code{tempdir()}.}
+
+\item{save_outputs}{Logical; if TRUE, write CSV/PNG outputs to \code{output_dir}. Default FALSE.}
+
+\item{verbose}{Logical; if TRUE, emit progress messages. Default FALSE.}
 }
 \value{
-The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR with Time_min column), the weighted heart rate per sequence (weightedHR with Time_min column) and a plot (plot). Additionally, CSV files (subseqHR and weightedHR) and PNG files (plots) are automatically saved to the current working directory for each channel and method.
+The positions (in indices) and durations of the sub-sequences (finalsubseq) and the corresponding candidate HR (candidateHR) obtained from the genetic algorithm, and the final results evaluating the candidates by autocorrelation values (results_ACF) or the tracking index (results_TI), which contains the details of the subsequences after checking for resolution (subseqHR with Time_min column), the weighted heart rate per sequence (weightedHR with Time_min column) and a plot (plot). If \code{save_outputs = TRUE}, file paths are recorded in \code{output$files}.
 }
 \description{
 Employing the autocorrelation function (ACF) with a genetic algorithm framework to locate periodic sub-sequences within each sequence. From the candidate heart rates of these sub-sequences, the final results are either evaluated based on the autocorrelation value or a tracking index (TI).
 }
 \examples{
-\dontrun{
+\donttest{
 # use the default parameters to analyse a zip file
 # the collatedata function will be called automatically
-computeHR(file_path = "data.zip")
+zip_path <- system.file("extdata", "example.zip", package = "CardiacDP")
+computeHR(file_path = zip_path, save_outputs = FALSE)
 }
 
-\dontrun{
+\donttest{
 # use the default parameters to analyse a csv file
-computeHR(file_path = "data.csv")
+csv_path <- system.file("extdata", "example.csv", package = "CardiacDP")
+computeHR(file_path = csv_path, reduce_res = 0.1, save_outputs = FALSE)
 }
 
-\dontrun{
+\donttest{
 # use customized parameters to analyse a zip file
-computeHR("data.zip", reduce_res = 0.1, max_gen = 30L, lr_thres = 0.8)
+zip_path <- system.file("extdata", "example.zip", package = "CardiacDP")
+computeHR(zip_path, reduce_res = 0.1, max_gen = 30L, lr_thres = 0.8, save_outputs = FALSE)
 }
 
-\dontrun{
+\donttest{
 # use custom parameters to analyse a csv file
-computeHR("data.csv", pop_size = 20L, an_in = 5, acf_thres = 0.6)
+csv_path <- system.file("extdata", "example.csv", package = "CardiacDP")
+computeHR(csv_path, reduce_res = 0.1, pop_size = 20L, an_in = 1, acf_thres = 0.6, save_outputs = FALSE)
 }
 }

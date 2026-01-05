@@ -4,10 +4,17 @@
 \alias{collatedata}
 \title{CardiacDP - collatedata()}
 \usage{
-collatedata(file_path)
+collatedata(file_path, output_file = NULL, verbose = FALSE)
 }
 \arguments{
 \item{file_path}{Designate the path to your file, must be a .zip file}
+
+\item{output_file}{Optional path to write the collated data table as a CSV file. May be either a full file path
+(e.g. \code{/path/to/out.csv}) or an output directory (e.g. \code{/path/to/outdir}). If a directory (or a path
+without a file extension) is provided, a file named \code{<input_stem>_collated.csv} is written inside it.
+Default NULL (no file written).}
+
+\item{verbose}{Logical; if TRUE, emit progress messages. Default FALSE.}
 }
 \value{
 A single collated data table
@@ -16,7 +23,6 @@ A single collated data table
 Automatically read and collate separate .csv files in chronological order as inferred by the file names and in hierarchy.
 }
 \examples{
-\dontrun{
-collatedata(file_path = "path/to/your/file.zip")
-}
+zip_path <- system.file("extdata", "example.zip", package = "CardiacDP")
+collated <- collatedata(zip_path)
 }
