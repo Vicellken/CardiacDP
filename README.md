@@ -33,7 +33,7 @@ lapply(packages, function(pkg) {
 })
 
 # Install the source package
-install.packages("CardiacDP_0.3.2.tar.gz", repos = NULL, type = "source")
+install.packages("CardiacDP_0.4.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Example
