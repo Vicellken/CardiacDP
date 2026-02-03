@@ -48,7 +48,7 @@ zip_path <- "" # PATH_TO_ZIP_FILE
 # use collatedata() to generate a single collated data table
 collated <- collatedata(
   file_path = zip_path,
-  output_file = "", # PATH_TO_SAVE_COLLATED_CSV
+  output_file = NULL, # PATH_TO_SAVE_COLLATED_CSV
   verbose = TRUE)
 
 # csv_path <- "" # PATH_TO_COLLATED_CSV
