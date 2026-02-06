@@ -61,18 +61,21 @@ computeHR(file_path = zip_path, save_outputs = FALSE)
 \donttest{
 # use the default parameters to analyse a csv file
 csv_path <- system.file("extdata", "example.csv", package = "CardiacDP")
-computeHR(file_path = csv_path, reduce_res = 0.1, save_outputs = FALSE)
+computeHR(file_path = csv_path, reduce_res = 0.1,
+          save_outputs = FALSE)
 }
 
 \donttest{
 # use customized parameters to analyse a zip file
 zip_path <- system.file("extdata", "example.zip", package = "CardiacDP")
-computeHR(zip_path, reduce_res = 0.1, max_gen = 30L, lr_thres = 0.8, save_outputs = FALSE)
+computeHR(zip_path, reduce_res = 0.1, max_gen = 30L,
+          lr_thres = 0.8, save_outputs = FALSE)
 }
 
 \donttest{
 # use custom parameters to analyse a csv file
 csv_path <- system.file("extdata", "example.csv", package = "CardiacDP")
-computeHR(csv_path, reduce_res = 0.1, pop_size = 20L, an_in = 1, acf_thres = 0.6, save_outputs = FALSE)
+computeHR(csv_path, reduce_res = 0.1, pop_size = 20L,
+          an_in = 1, acf_thres = 0.6, save_outputs = FALSE)
 }
 }
