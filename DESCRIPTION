@@ -1,6 +1,6 @@
 Package: CardiacDP
 Title: Rapid Automated Cardiac Data Processing using Autocorrelation, a Genetic Algorithm and a Tracking Index
-Version: 0.4.0
+Version: 0.4.2
 Authors@R: c(
   person(given = "Sarah",
          family = "Lau",
@@ -17,10 +17,7 @@ Authors@R: c(
          email = "guyf0601@connect.hku.hk",
          comment = c(ORCID = "0000-0003-1741-638X")))
 Maintainer: Yi-Fei Gu <guyf0601@connect.hku.hk>
-Description: An algorithm developed to efficiently and accurately process complex and variable cardiac data with three key features: 1. employing autocorrelation to identify recurrent heartbeats and use their periods to compute heart rates; 2. incorporating a genetic algorithm framework to minimize data loss due to noise interference and accommodate within-sequence variations; and 3. introducing a tracking index as a moving reference to reduce errors. "An
-    Algorithm Designed for Rapid Automated Cardiac Data Processing: Integrating
-    Autocorrelation, a Genetic Algorithm and a Tracking Index" Lau et al. (2025)
-    <https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5153081>.
+Description: An algorithm developed to efficiently and accurately process complex and variable cardiac data with three key features: 1. employing autocorrelation to identify recurrent heartbeats and use their periods to compute heart rates; 2. incorporating a genetic algorithm framework to minimize data loss due to noise interference and accommodate within-sequence variations; and 3. introducing a tracking index as a moving reference to reduce errors.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

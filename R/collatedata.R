@@ -109,9 +109,9 @@ collatedata <- function(file_path, output_file = NULL, verbose = FALSE) {
                 header_row <- suppressWarnings(readLines(tempn, n = 1L, encoding = "Windows-1252"))
                 inform("Header row: ", header_row)
                 # Then read data skipping the headers
-                # Read file content as text with Windows-1252 encoding
-                file_text <- paste(readLines(tempn, encoding = "Windows-1252"), collapse = "\n")
-                temp_data <- suppressWarnings(data.table::fread(text = file_text, skip = 1L))
+                temp_data <- suppressWarnings(
+                    data.table::fread(tempn, skip = 1L, encoding = "Latin-1")
+                )
                 if (nrow(temp_data) > 0 && ncol(temp_data) > 0) {
                     # Parse column names from header line
                     ch_names <- unlist(strsplit(header_row, "[,;]"))
@@ -138,9 +138,9 @@ collatedata <- function(file_path, output_file = NULL, verbose = FALSE) {
             error = function(e) {
                 # Try second format (space separated)
                 inform("Attempting space format...")
-                # Read file content as text with Windows-1252 encoding
-                file_text <- paste(readLines(tempn, encoding = "Windows-1252"), collapse = "\n")
-                temp_data <- suppressWarnings(data.table::fread(text = file_text))
+                temp_data <- suppressWarnings(
+                    data.table::fread(tempn, encoding = "Latin-1")
+                )
                 if (nrow(temp_data) > 0 && ncol(temp_data) > 0) {
                     # Extract column names without units
                     ch_names <- colnames(temp_data)
@@ -206,17 +206,17 @@ collatedata <- function(file_path, output_file = NULL, verbose = FALSE) {
             function(p) {
                 tryCatch(
                     {
-                        # Read file content as text with Windows-1252 encoding
-                        file_text <- paste(readLines(dir_files[p], encoding = "Windows-1252"), collapse = "\n")
                         if (file_format == "semicolon") {
                             data <- data.table::fread(
-                                text = file_text,
-                                skip = 1L
+                                dir_files[p],
+                                skip = 1L,
+                                encoding = "Latin-1"
                             )
                             colnames(data) <- ch_names
                         } else {
                             data <- data.table::fread(
-                                text = file_text
+                                dir_files[p],
+                                encoding = "Latin-1"
                             )
                             colnames(data) <- ch_names
                         }

@@ -3,16 +3,17 @@
 
 # CardiacDP
 
-CardiacDP can automatically read and collate heart rate data, and then
-employing the autocorrelation function (ACF) with a genetic algorithm
-framework to locate periodic sub-sequences within each sequence. From
-the candidate heart rates of these sub-sequences, the final results are
-either evaluated based on the autocorrelation value or a tracking index
-(TI).
+CardiacDP (Cardiac Data Processing) can automatically read and collate
+heart rate data, and compute average heart rate per analysis interval
+(sequence). The analysis employs the autocorrelation function (ACF) with
+a genetic algorithm framework to identify periods of repeating waveforms
+within each sequence. These candidate heart rates of sub-sequences are
+then evaluated either by the autocorrelation value or a tracking index
+(TI), and finally weighted as the final output.
 
 ## Package structure
 
-<img src="pkg_str.png" width="100%" />
+<img src="pkg_str.png" alt="" width="100%" />
 
 ## Installation
 
@@ -33,73 +34,63 @@ lapply(packages, function(pkg) {
 })
 
 # Install the source package
-install.packages("CardiacDP_0.4.0.tar.gz", repos = NULL, type = "source")
+install.packages("CardiacDP_0.4.1.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Example
 
-This is an example shows the complete analysis pipeline:
+This is an example showing the complete analysis pipeline:
 
 ``` r
 library(CardiacDP)
 
-zip_path <- "" # PATH_TO_ZIP_FILE
-
-# use collatedata() to generate a single collated data table
-collated <- collatedata(
-  file_path = zip_path,
-  output_file = NULL, # PATH_TO_SAVE_COLLATED_CSV
-  verbose = TRUE)
+zip_path <- "~/rawfiles.zip" # PATH_TO_ZIP_FILE
 
 # csv_path <- "" # PATH_TO_COLLATED_CSV
 
-# run computeHR() (no files are written by default)
+# run computeHR() for average heart rate analysis (no files are written by default)
 output <- computeHR(
-  file_path = zip_path, # csv_path
+  file_path = csv_path, # collatedata() will automatically run if zip_path is directly provided here
   save_outputs = TRUE,
-  output_dir = "", # PATH_TO_STORE_OUTPUTS
+  output_dir = NULL, # PATH_TO_STORE_OUTPUTS
   verbose = TRUE)
 ```
 
-The user can then access the output by the channel name. finalsubseq is
-a list showing the positions and durations of the final sub-sequences
-determined for each sequence. They are presented as data tables (s =
-start index of the sub-sequence; e = end index of the sub-sequence; p =
-which of the initial population the sub-sequence is derived from; and f
-= duration of the sub-sequence), the rows of which represent separate
-final sub-sequences. The example below shows the first five sequences
-(e.g. \[\[4\]\] indicates at the 4th minute there are three final
-sub-sequences).
+The user can access the output by the channel name. finalsubseq is a
+list showing the positions and durations of the final periodic
+sub-sequences determined for each sequence. They are presented as data
+tables (s = start index of the sub-sequence; e = end index of the
+sub-sequence; p = which of the initial population the sub-sequence is
+derived from; and f = duration of the sub-sequence), the rows of which
+represent separate final sub-sequences.
 
 ``` r
 # positions (in indices) and durations of the final sub-sequences
-# NOTE: the results are not included to ease the reading, please refer to Appendix S4
+# NOTE: the results are not included here for simplicity. For more details please refer to Supplementary Information S4 of the publication / User guideline.pdf
 
 # output[["finalsubseq"]][["Channel A"]]
 ```
 
 The corresponding candidate heart rates per sub-sequences can be found
 in candidateHR (ACF = autocorrelation value; lag = time lag; and hr =
-heart rate). Taking the 4th minute again as an example, there are two
-candidate heart rates for the first sub-sequence (as shown in
-\[\[4\]\]\[\[1\]\]), and only one candidate heart rate for the other two
-sub-sequences (as shown in \[\[4\]\]\[\[2\]\]and \[\[4\]\]\[\[3\]\]).
+heart rate).
 
 ``` r
 # candidate heart rates of the final sub-sequences
-# NOTE: the results are not included to ease the reading, please refer to Appendix S4
+# NOTE: the results are not included here for simplicity. For more details please refer to Supplementary Information S4 of the publication / User guideline.pdf
 
 # output[["candidateHR"]][["Channel A"]]
 ```
 
 The final results after evaluating the candidate heart rates, checking
-for resolution and weighing for durations can eventually be obtained
+for resolution and weighting for durations can eventually be obtained
 from results_ACF and results_TI. These results referred to evaluating
-the candidate heart rates by autocorrelation values (i.e. the “ACF + GA”
-approach) and the tracking index (i.e. the “ACF + GA +TI” approach)
-respectively. Each of them consists of 1) the details of the
-sub-sequences (subseqHR); 2) the weighted heart rate per sequence
-(weightedHR); and 3) a plot of weighted heart rate against time (plot).
+the candidate heart rates by merely autocorrelation values (i.e. the
+“ACF + GA” approach in the publication) or the tracking index (i.e. the
+“ACF + GA +TI” approach in the publication) respectively. Each of them
+consists of 1) the details of the sub-sequences (subseqHR); 2) the
+weighted heart rate per sequence (weightedHR); and 3) a plot of weighted
+heart rate against time (plot).
 
 ``` r
 ## results obtained from evaluating the candidate heart rates by autocorrelation values
@@ -128,7 +119,6 @@ CSV/PNG outputs, set `save_outputs = TRUE` and optionally provide
 csv_path <- system.file("extdata", "example.csv", package = "CardiacDP")
 output <- computeHR(
   file_path = csv_path,
-  reduce_res = 0.1,
   save_outputs = TRUE,
   output_dir = tempdir()
 )
@@ -178,8 +168,6 @@ For each channel and method, heart rate plots are saved:
 - `lag` - Time lag
 - `hr` - Heart rate in beats per minute (can be NA)
 - `res` - Resolution used
-- `Time_min` - Time in minutes (start of analysis interval = (ix - 1) ×
-  analysis_interval)
 
 ## Reproducing plots from saved CSV files
 
@@ -192,16 +180,20 @@ library(RColorBrewer)
 library(data.table)
 
 # Read the saved weighted heart rate data (example; assumes you ran computeHR(save_outputs=TRUE))
-data <- fread(output$files[["Channel A"]][["TI_weightedHR"]])
+channel <- "Channel A"
+data <- fread(paste0(gsub(" ","_",channel),"_TI_weightedHR.csv"))
 
 # Create the plot (matching the package output)
 palette <- brewer.pal(n = 11, name = "RdYlBu")
 names(palette) <- seq(0, 10, 1) / 10
 
+# analysis interval (by default 1 min)
+an_in <- 1
+
 ggplot() +
   geom_point(
     data = data,
-    aes(x = Time_min, y = whr, fill = factor(floor(wACF * 10) / 10)),
+    aes(x = ix * an_in, y = whr, fill = factor(floor(wACF * 10) / 10)),
     colour = "black", shape = 21, size = 4, alpha = 0.8
   ) +
   scale_fill_manual(
@@ -230,7 +222,7 @@ ggplot() +
 
 **Key columns for plotting:**
 
-- **X-axis:** `Time_min` - Time in minutes
+- **X-axis:** `ix * an_in` - Time in minutes
 - **Y-axis:** `whr` - Weighted heart rate (bpm)
 - **Fill color:** `wACF` - Weighted autocorrelation value (colored by
   discrete bins)

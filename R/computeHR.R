@@ -118,10 +118,8 @@ computeHR <- function(
 
     # Check if file_path is a CSV or ZIP file
     if (stringr::str_detect(file_path, "\\.csv$")) {
-        # Read file content as text with Windows-1252 encoding
-        file_text <- paste(readLines(file_path, encoding = "Windows-1252"), collapse = "\n")
-        # check if file has "Time" column
-        temp_check <- data.table::fread(text = file_text)
+        # Read CSV directly to avoid creating a huge single string
+        temp_check <- data.table::fread(file_path, encoding = "Latin-1")
         if (!any(stringr::str_detect(
             colnames(temp_check), "Time"
         ))) {
@@ -135,8 +133,7 @@ computeHR <- function(
         if (nrow(temp_check) < 2) {
             stop("File must have at least 2 rows.")
         }
-        # If it's a CSV file, read it into a data.table
-        # Reuse the already read data instead of reading again
+        # If it's a CSV file, reuse the already read data instead of reading again
         rawmaster <- temp_check
 
         # convert data into numeric class
