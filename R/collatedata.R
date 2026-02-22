@@ -192,7 +192,12 @@ collatedata <- function(file_path, output_file = NULL, verbose = FALSE) {
     }
 
     ## read data
-    raw_res <- as.numeric(temp[2, Time])
+    raw_res <- abs(as.numeric(temp[2, Time] - temp[1, Time]))
+    if (is.na(raw_res) || raw_res <= 0) {
+        stop("Cannot determine time resolution from the data. ",
+             "The Time column must contain incrementing numeric values. ",
+             "Found Time[1]=", temp[1, Time], ", Time[2]=", temp[2, Time])
+    }
 
     rawmaster <- list() # initialize master data.table
     for (f in 1:nfold) {

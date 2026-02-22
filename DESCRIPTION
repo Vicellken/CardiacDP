@@ -1,6 +1,6 @@
 Package: CardiacDP
 Title: Automated Cardiac Data Processing via ACF, GA & Tracking Index
-Version: 0.4.2
+Version: 0.4.3
 Authors@R: c(
   person(given = "Sarah",
          family = "Lau",

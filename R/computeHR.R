@@ -151,11 +151,22 @@ computeHR <- function(
     }
 
     # derive resolution and channel names from the collated data table
-    raw_res <- as.numeric(rawmaster[2, Time])
+    raw_res <- abs(as.numeric(rawmaster[2, Time] - rawmaster[1, Time]))
+    if (is.na(raw_res) || raw_res <= 0) {
+        stop("Cannot determine time resolution from the data. ",
+             "The Time column must contain incrementing numeric values. ",
+             "Found Time[1]=", rawmaster[1, Time], ", Time[2]=", rawmaster[2, Time])
+    }
     ch_selected <- colnames(rawmaster)[-which(colnames(rawmaster) == "Time")]
 
     # interval that is the closest to the desired resolution
     closest_interval <- which.min(abs(rawmaster[, Time] - reduce_res)) - 1L
+    if (closest_interval < 1L) {
+        inform("Note: reduce_res (", reduce_res,
+               "s) is at or below the data's native resolution (",
+               raw_res, "s). Using native resolution instead.")
+        closest_interval <- 1L
+    }
     actual_new_res <- rawmaster[closest_interval + 1L, Time] # new resolution
 
     # create data table of reduced resolution
