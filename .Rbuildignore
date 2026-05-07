@@ -4,3 +4,5 @@
 ^LICENSE\.md$
 ^pkg_str\.png$
 ^User guidelines\.pdf$
+^\.positai$
+^\.claude$
